@@ -225,11 +225,11 @@ function cipherAllVisibleEntries() {
     
     // Try multiple selectors to find World Info textareas
     const selectors = [
+        '.world_entry textarea',
         'textarea[name="world_info_entry_content"]',
-        'textarea[id*="world_info"]',
-        'textarea.world_entry_form_control',
-        '#world_popup textarea',
-        '.world_entry textarea'
+        '#world_info textarea',
+        '.world_entry_form_control',
+        '#world_popup textarea'
     ];
     
     let textareas = [];
@@ -244,7 +244,7 @@ function cipherAllVisibleEntries() {
     
     if (textareas.length === 0) {
         console.log(`[${extensionName}] No World Info textareas found`);
-        toastr.warning("No World Info entries found. Make sure World Info panel is open.", "Lore Spoilers");
+        toastr.warning("No World Info entries found. Make sure an entry is open for editing.", "Lore Spoilers");
         return;
     }
     
@@ -253,9 +253,16 @@ function cipherAllVisibleEntries() {
     
     textareas.forEach((textarea, index) => {
         const currentValue = textarea.value;
-        console.log(`[${extensionName}] Textarea ${index}: "${currentValue.substring(0, 50)}..."`);
+        const valueLength = currentValue ? currentValue.length : 0;
+        console.log(`[${extensionName}] Textarea ${index}: length=${valueLength}, value="${currentValue.substring(0, 100)}"`);
         
         const spoilerTag = extension_settings[extensionName].spoilerTag;
+        
+        // Skip empty textareas
+        if (!currentValue || currentValue.trim().length === 0) {
+            console.log(`[${extensionName}] Textarea ${index} is empty, skipping`);
+            return;
+        }
         
         if (currentValue.startsWith(spoilerTag)) {
             console.log(`[${extensionName}] Textarea ${index} has spoiler tag`);
@@ -266,21 +273,27 @@ function cipherAllVisibleEntries() {
             originalValues.set(textareaId, currentValue);
             const ciphered = processSpoilerText(currentValue);
             
-            console.log(`[${extensionName}] Original: ${currentValue.substring(0, 50)}`);
-            console.log(`[${extensionName}] Ciphered: ${ciphered.substring(0, 50)}`);
+            console.log(`[${extensionName}] Original: ${currentValue.substring(0, 100)}`);
+            console.log(`[${extensionName}] Ciphered: ${ciphered.substring(0, 100)}`);
             
-            // Only update if different (to avoid unnecessary changes)
-            if (textarea.value !== ciphered) {
-                textarea.value = ciphered;
-                // Trigger change event so SillyTavern knows the value changed
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                cipheredCount++;
-                console.log(`[${extensionName}] Successfully ciphered textarea ${index}`);
-            } else {
-                console.log(`[${extensionName}] Textarea ${index} already ciphered`);
-            }
+            // Update textarea value
+            textarea.value = ciphered;
+            
+            // Trigger events so SillyTavern knows the value changed
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Force focus and blur to trigger ST's save
+            setTimeout(() => {
+                textarea.focus();
+                textarea.blur();
+            }, 100);
+            
+            cipheredCount++;
+            console.log(`[${extensionName}] Successfully ciphered textarea ${index}`);
         } else {
             console.log(`[${extensionName}] Textarea ${index} does not start with spoiler tag "${spoilerTag}"`);
+            console.log(`[${extensionName}] First 20 chars: "${currentValue.substring(0, 20)}"`);
         }
     });
     
@@ -289,7 +302,7 @@ function cipherAllVisibleEntries() {
         toastr.success(`Ciphered ${cipheredCount} spoiler entries`, "Lore Spoilers");
     } else {
         console.log(`[${extensionName}] No entries were ciphered`);
-        toastr.info("No spoiler entries found to cipher", "Lore Spoilers");
+        toastr.info("No spoiler entries found to cipher. Make sure entries start with: " + extension_settings[extensionName].spoilerTag, "Lore Spoilers");
     }
 }
 
