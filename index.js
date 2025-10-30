@@ -22,7 +22,6 @@ async function loadSettings() {
     $("#lore_spoilers_enabled").prop("checked", extension_settings[extensionName].enabled);
     $("#lore_spoilers_tag").val(extension_settings[extensionName].spoilerTag);
     $("#lore_spoilers_shift").val(extension_settings[extensionName].cipherShift);
-    console.log(`[${extensionName}] Settings loaded:`, extension_settings[extensionName]);
 }
 
 // Handle enable checkbox change
@@ -30,7 +29,6 @@ function onEnabledChange(event) {
     const value = Boolean($(event.target).prop("checked"));
     extension_settings[extensionName].enabled = value;
     saveSettingsDebounced();
-    console.log(`[${extensionName}] Setting saved - enabled:`, value);
 }
 
 // Handle spoiler tag change
@@ -38,7 +36,6 @@ function onSpoilerTagChange(event) {
     const value = String($(event.target).val());
     extension_settings[extensionName].spoilerTag = value;
     saveSettingsDebounced();
-    console.log(`[${extensionName}] Setting saved - spoilerTag:`, value);
 }
 
 // Handle cipher shift change
@@ -50,7 +47,6 @@ function onCipherShiftChange(event) {
     extension_settings[extensionName].cipherShift = value;
     $("#lore_spoilers_shift").val(value); // Update display if clamped
     saveSettingsDebounced();
-    console.log(`[${extensionName}] Setting saved - cipherShift:`, value);
 }
 
 // Caesar cipher function
@@ -97,24 +93,6 @@ function decipherSpoilerText(text) {
     }
     
     return text;
-}
-
-// Test button handler
-function onTestButtonClick() {
-    const testText = $("#lore_spoilers_test").val();
-    
-    if (!testText) {
-        toastr.warning("Please enter some text to test", "Lore Spoilers");
-        return;
-    }
-    
-    const processed = processSpoilerText(testText);
-    $("#lore_spoilers_test").val(processed);
-    
-    console.log(`[${extensionName}] Test cipher - Original:`, testText);
-    console.log(`[${extensionName}] Test cipher - Processed:`, processed);
-    
-    toastr.success("Text ciphered! Click again to decipher.", "Lore Spoilers");
 }
 
 // Manual hide button handler
@@ -168,7 +146,6 @@ function onWorldInfoFocus(event) {
         // Show plaintext for editing
         textarea.value = data.plaintext;
         data.isRevealed = true;
-        console.log(`[${extensionName}] Revealed entry for editing:`, textareaId);
     }
 }
 
@@ -211,11 +188,8 @@ function onWorldInfoInput(event) {
 // NOTE: This only ciphers the DISPLAY. The actual WI database stays plaintext for the LLM.
 function cipherAllVisibleEntries() {
     if (!extension_settings[extensionName].enabled) {
-        console.log(`[${extensionName}] Extension disabled, skipping cipher`);
         return;
     }
-    
-    console.log(`[${extensionName}] Starting manual cipher (display only)...`);
     
     // Try multiple selectors to find World Info textareas
     const selectors = [
@@ -230,26 +204,21 @@ function cipherAllVisibleEntries() {
     for (const selector of selectors) {
         const found = document.querySelectorAll(selector);
         if (found.length > 0) {
-            console.log(`[${extensionName}] Found ${found.length} textareas with selector: ${selector}`);
             textareas = Array.from(found);
             break;
         }
     }
     
     if (textareas.length === 0) {
-        console.log(`[${extensionName}] No World Info textareas found`);
         toastr.warning("No World Info entries found. Make sure an entry is open for editing.", "Lore Spoilers");
         return;
     }
     
-    console.log(`[${extensionName}] Processing ${textareas.length} textareas`);
     let cipheredCount = 0;
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
     
-    textareas.forEach((textarea, index) => {
+    textareas.forEach((textarea) => {
         const currentValue = textarea.value;
-        const valueLength = currentValue ? currentValue.length : 0;
-        
-        const spoilerTag = extension_settings[extensionName].spoilerTag;
         
         // Skip empty textareas
         if (!currentValue || currentValue.trim().length === 0) {
@@ -270,18 +239,14 @@ function cipherAllVisibleEntries() {
             
             // Update textarea DISPLAY to show ciphered (but don't save yet)
             textarea.value = ciphered;
-            
             cipheredCount++;
-            console.log(`[${extensionName}] Ciphered display for textarea ${index}`);
         }
     });
     
     if (cipheredCount > 0) {
-        console.log(`[${extensionName}] Ciphered ${cipheredCount} entries for display`);
-        toastr.success(`Ciphered ${cipheredCount} spoiler entries (UI only - LLM sees plaintext)`, "Lore Spoilers");
+        toastr.success(`Ciphered ${cipheredCount} spoiler ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
     } else {
-        console.log(`[${extensionName}] No entries were ciphered`);
-        toastr.info("No spoiler entries found to cipher. Make sure entries start with: " + extension_settings[extensionName].spoilerTag, "Lore Spoilers");
+        toastr.info("No spoiler entries found. Make sure entries start with: " + spoilerTag, "Lore Spoilers");
     }
 }
 
@@ -301,7 +266,6 @@ function setupWorldInfoMonitoring() {
             childList: true,
             subtree: true
         });
-        console.log(`[${extensionName}] Monitoring World Info panel`);
     }
     
     // Initial processing
@@ -330,8 +294,6 @@ function onWorldInfoSaveClick(event) {
         return;
     }
     
-    console.log(`[${extensionName}] Save button clicked, restoring plaintext...`);
-    
     // Find all textareas and restore plaintext
     const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
     
@@ -343,7 +305,6 @@ function onWorldInfoSaveClick(event) {
             
             // Restore plaintext so ST saves it
             textarea.value = data.plaintext;
-            console.log(`[${extensionName}] ✅ Restored plaintext for save:`, textareaId);
         }
     });
 }
@@ -352,9 +313,7 @@ function onWorldInfoSaveClick(event) {
 // Since we only cipher the UI display and never save ciphered text to the database,
 // the LLM automatically receives plaintext from the World Info system.
 function setupLLMPlaintextHook() {
-    console.log(`[${extensionName}] 📝 Note: LLM receives plaintext automatically`);
-    console.log(`[${extensionName}] This extension only ciphers the UI display, not the saved data`);
-    console.log(`[${extensionName}] World Info database always contains plaintext for the LLM`);
+    // Nothing to do here - plaintext is saved to database automatically
 }
 
 // Attach focus/blur listeners to World Info textareas
@@ -390,13 +349,10 @@ function onWorldInfoBlur(event) {
         textarea.value = data.plaintext;
         data.isRevealed = false;
         
-        console.log(`[${extensionName}] Restored plaintext for save:`, textareaId);
-        
         // After a short delay, cipher the display again (after ST has read the value)
         setTimeout(() => {
             if (document.activeElement !== textarea) {
                 textarea.value = data.ciphered;
-                console.log(`[${extensionName}] Re-ciphered display after save:`, textareaId);
             }
         }, 100);
     }
@@ -404,8 +360,6 @@ function onWorldInfoBlur(event) {
 
 // Extension initialization
 jQuery(async () => {
-    console.log(`[${extensionName}] Loading...`);
-   
     try {
         // Load HTML from file
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
@@ -420,9 +374,6 @@ jQuery(async () => {
         $("#lore_spoilers_tag").on("input", onSpoilerTagChange);
         $("#lore_spoilers_shift").on("input", onCipherShiftChange);
         
-        // Bind test button
-        $("#lore_spoilers_test_button").on("click", onTestButtonClick);
-        
         // Bind hide spoilers button
         $("#lore_spoilers_hide_button").on("click", onHideSpoilersClick);
        
@@ -434,9 +385,7 @@ jQuery(async () => {
         
         // Setup LLM plaintext hook
         setupLLMPlaintextHook();
-       
-        console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
-        console.error(`[${extensionName}] ❌ Failed to load:`, error);
+        console.error(`[${extensionName}] Failed to load:`, error);
     }
 });
