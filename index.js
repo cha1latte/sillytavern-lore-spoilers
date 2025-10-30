@@ -117,6 +117,119 @@ function onTestButtonClick() {
     toastr.success("Text ciphered! Click again to decipher.", "Lore Spoilers");
 }
 
+// Store original (plaintext) values for World Info entries
+const originalValues = new Map();
+
+// Process World Info textareas
+function processWorldInfoEntries() {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    // Find all World Info content textareas
+    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    
+    textareas.forEach(textarea => {
+        const currentValue = textarea.value;
+        const spoilerTag = extension_settings[extensionName].spoilerTag;
+        
+        // Only process if it starts with spoiler tag and isn't already ciphered
+        if (currentValue.startsWith(spoilerTag)) {
+            // Check if we've already stored the original
+            const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+            textarea.setAttribute('data-lore-spoiler-id', textareaId);
+            
+            // If not in our map, this is a fresh entry - store original and cipher it
+            if (!originalValues.has(textareaId)) {
+                originalValues.set(textareaId, currentValue);
+                const ciphered = processSpoilerText(currentValue);
+                textarea.value = ciphered;
+                console.log(`[${extensionName}] Ciphered entry:`, textareaId);
+            }
+        }
+    });
+}
+
+// Handle focus on World Info textarea (reveal original)
+function onWorldInfoFocus(event) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const textarea = event.target;
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+    
+    if (textareaId && originalValues.has(textareaId)) {
+        textarea.value = originalValues.get(textareaId);
+        console.log(`[${extensionName}] Revealed entry:`, textareaId);
+    }
+}
+
+// Handle blur on World Info textarea (re-cipher)
+function onWorldInfoBlur(event) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const textarea = event.target;
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+    const currentValue = textarea.value;
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    
+    // Update original value and re-cipher
+    if (currentValue.startsWith(spoilerTag)) {
+        if (!textareaId) {
+            const newId = `lore_${Date.now()}_${Math.random()}`;
+            textarea.setAttribute('data-lore-spoiler-id', newId);
+            originalValues.set(newId, currentValue);
+        } else {
+            originalValues.set(textareaId, currentValue);
+        }
+        
+        const ciphered = processSpoilerText(currentValue);
+        textarea.value = ciphered;
+        console.log(`[${extensionName}] Re-ciphered entry:`, textareaId);
+    }
+}
+
+// Monitor for World Info panel changes and new entries
+function setupWorldInfoMonitoring() {
+    // Use MutationObserver to watch for new World Info entries
+    const observer = new MutationObserver((mutations) => {
+        processWorldInfoEntries();
+        attachWorldInfoListeners();
+    });
+    
+    // Observe the world info container
+    const worldInfoContainer = document.querySelector('#world_info');
+    if (worldInfoContainer) {
+        observer.observe(worldInfoContainer, {
+            childList: true,
+            subtree: true
+        });
+        console.log(`[${extensionName}] Monitoring World Info panel`);
+    }
+    
+    // Initial processing
+    processWorldInfoEntries();
+    attachWorldInfoListeners();
+}
+
+// Attach focus/blur listeners to World Info textareas
+function attachWorldInfoListeners() {
+    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    
+    textareas.forEach(textarea => {
+        // Remove old listeners to avoid duplicates
+        textarea.removeEventListener('focus', onWorldInfoFocus);
+        textarea.removeEventListener('blur', onWorldInfoBlur);
+        
+        // Add new listeners
+        textarea.addEventListener('focus', onWorldInfoFocus);
+        textarea.addEventListener('blur', onWorldInfoBlur);
+    });
+}
+
 // Extension initialization
 jQuery(async () => {
     console.log(`[${extensionName}] Loading...`);
@@ -140,6 +253,9 @@ jQuery(async () => {
        
         // Load saved settings
         loadSettings();
+        
+        // Setup World Info monitoring
+        setupWorldInfoMonitoring();
        
         console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
