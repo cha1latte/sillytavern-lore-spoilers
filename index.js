@@ -331,125 +331,85 @@ function setupWorldInfoMonitoring() {
 
 // Hook into SillyTavern's World Info processing to send plaintext to LLM
 function setupLLMPlaintextHook() {
-    const context = getContext();
-    
-    console.log(`[${extensionName}] Setting up LLM plaintext hook...`);
+    console.log(`[${extensionName}] Setting up World Info plaintext hook...`);
     console.log(`[${extensionName}] Currently tracking ${originalValues.size} spoiler entries`);
     
-    // Intercept by patching the textarea values right before message send
-    const originalSend = $.ajax;
-    let hookInstalled = false;
+    // Hook into the world info data when it's being retrieved for context building
+    // We need to patch the world info entries as they're being read
+    const context = getContext();
     
-    $.ajax = function(options) {
-        if (!hookInstalled) {
-            console.log(`[${extensionName}] Ajax hook is active and intercepting requests`);
-            hookInstalled = true;
+    if (!context || !context.eventSource) {
+        console.log(`[${extensionName}] Warning: Context or eventSource not available`);
+    }
+    
+    // Listen for chat generation events to intercept world info
+    const originalEventListener = context?.eventSource?.on?.bind(context.eventSource);
+    
+    // Try to hook into world info retrieval by monitoring when entries are saved
+    // Store a reference to modify world info before it's sent to LLM
+    const checkInterval = setInterval(() => {
+        // Check if world_info global exists
+        if (typeof world_info !== 'undefined') {
+            console.log(`[${extensionName}] Found world_info global object`);
+            clearInterval(checkInterval);
+            patchWorldInfoRetrieval();
         }
-        
-        // Log all AJAX requests to see what we're intercepting
-        if (options && options.url) {
-            console.log(`[${extensionName}] AJAX request to: ${options.url}`);
-        }
-        
-        // Check if this is a message being sent to the LLM
-        if (options && options.url && (
-            options.url.includes('/generate') || 
-            options.url.includes('/api/completions') ||
-            options.url.includes('/chat/completions') ||
-            options.url.includes('/v1/chat') ||
-            options.url.includes('/v1/completions')
-        )) {
-            console.log(`[${extensionName}] 🎯 Intercepting LLM request to: ${options.url}`);
-            console.log(`[${extensionName}] Extension enabled: ${extension_settings[extensionName].enabled}`);
-            console.log(`[${extensionName}] Tracked spoilers: ${originalValues.size}`);
+    }, 1000);
+    
+    // Timeout after 10 seconds
+    setTimeout(() => {
+        clearInterval(checkInterval);
+    }, 10000);
+    
+    console.log(`[${extensionName}] ✅ World Info hook setup initiated`);
+}
+
+// Patch World Info retrieval to return plaintext for spoiler entries
+function patchWorldInfoRetrieval() {
+    console.log(`[${extensionName}] Attempting to patch World Info retrieval...`);
+    
+    // Store reference to the original world_info entries
+    if (typeof world_info === 'undefined' || !world_info || !world_info.globalSelect) {
+        console.log(`[${extensionName}] World Info structure not as expected`);
+        return;
+    }
+    
+    // Store original function if it exists
+    const originalGetEntries = world_info.getEntries;
+    
+    // Monkey-patch to intercept World Info entries
+    if (originalGetEntries) {
+        world_info.getEntries = function(...args) {
+            const entries = originalGetEntries.apply(this, args);
             
             if (!extension_settings[extensionName].enabled) {
-                console.log(`[${extensionName}] Extension disabled, skipping plaintext replacement`);
-                return originalSend.apply(this, arguments);
+                return entries;
             }
             
-            if (originalValues.size === 0) {
-                console.log(`[${extensionName}] No spoilers tracked, skipping plaintext replacement`);
-                return originalSend.apply(this, arguments);
-            }
+            // Replace ciphered content with plaintext
+            entries.forEach(entry => {
+                if (entry.content) {
+                    const spoilerTag = extension_settings[extensionName].spoilerTag;
+                    if (entry.content.startsWith(spoilerTag)) {
+                        // Find if we have the plaintext version stored
+                        originalValues.forEach((plaintext, id) => {
+                            const ciphered = processSpoilerText(plaintext);
+                            if (entry.content === ciphered) {
+                                entry.content = plaintext;
+                                console.log(`[${extensionName}] ✅ Replaced ciphered WI entry with plaintext for LLM`);
+                            }
+                        });
+                    }
+                }
+            });
             
-            // Replace any ciphered World Info with plaintext in the request
-            if (options.data) {
-                let data = options.data;
-                let dataStr = typeof data === 'string' ? data : JSON.stringify(data);
-                
-                console.log(`[${extensionName}] Original data length: ${dataStr.length}`);
-                console.log(`[${extensionName}] First 200 chars: ${dataStr.substring(0, 200)}`);
-                
-                if (typeof data === 'string') {
-                    try {
-                        data = JSON.parse(data);
-                    } catch (e) {
-                        console.log(`[${extensionName}] Data is not JSON, processing as string`);
-                    }
-                }
-                
-                let replacementCount = 0;
-                const spoilerTag = extension_settings[extensionName].spoilerTag;
-                
-                // Replace ciphered text with plaintext from our stored originals
-                originalValues.forEach((plaintext, id) => {
-                    const ciphered = processSpoilerText(plaintext);
-                    
-                    console.log(`[${extensionName}] Checking for spoiler ${id}`);
-                    console.log(`[${extensionName}]   Plaintext: ${plaintext.substring(0, 50)}`);
-                    console.log(`[${extensionName}]   Ciphered:  ${ciphered.substring(0, 50)}`);
-                    
-                    // Replace in string data
-                    if (typeof dataStr === 'string' && dataStr.includes(ciphered)) {
-                        dataStr = dataStr.replace(new RegExp(ciphered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), plaintext);
-                        replacementCount++;
-                        console.log(`[${extensionName}] ✅ Replaced ciphered text with plaintext in data string`);
-                    }
-                    
-                    // Replace in parsed object
-                    if (typeof data === 'object') {
-                        // Replace in prompt
-                        if (data.prompt && typeof data.prompt === 'string' && data.prompt.includes(ciphered)) {
-                            data.prompt = data.prompt.replace(new RegExp(ciphered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), plaintext);
-                            replacementCount++;
-                            console.log(`[${extensionName}] ✅ Replaced ciphered text with plaintext in prompt`);
-                        }
-                        
-                        // Replace in messages array
-                        if (data.messages && Array.isArray(data.messages)) {
-                            data.messages.forEach((msg, idx) => {
-                                if (msg.content && typeof msg.content === 'string' && msg.content.includes(ciphered)) {
-                                    msg.content = msg.content.replace(new RegExp(ciphered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), plaintext);
-                                    replacementCount++;
-                                    console.log(`[${extensionName}] ✅ Replaced ciphered text with plaintext in message ${idx}`);
-                                }
-                            });
-                        }
-                    }
-                });
-                
-                console.log(`[${extensionName}] Total replacements made: ${replacementCount}`);
-                
-                // Update options.data with modified version
-                if (typeof options.data === 'string' && typeof data === 'object') {
-                    options.data = JSON.stringify(data);
-                } else if (typeof options.data === 'string') {
-                    options.data = dataStr;
-                } else {
-                    options.data = data;
-                }
-                
-                if (replacementCount > 0) {
-                    console.log(`[${extensionName}] Modified data length: ${JSON.stringify(options.data).length}`);
-                }
-            }
-        }
+            return entries;
+        };
         
-        return originalSend.apply(this, arguments);
-    };
-    
-    console.log(`[${extensionName}] ✅ LLM plaintext hook installed`);
+        console.log(`[${extensionName}] ✅ Successfully patched world_info.getEntries`);
+    } else {
+        console.log(`[${extensionName}] Could not find world_info.getEntries function`);
+    }
 }
 
 // Attach focus/blur listeners to World Info textareas
