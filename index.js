@@ -53,6 +53,70 @@ function onCipherShiftChange(event) {
     console.log(`[${extensionName}] Setting saved - cipherShift:`, value);
 }
 
+// Caesar cipher function
+function caesarCipher(text, shift) {
+    return text.split('').map(char => {
+        if (char.match(/[a-z]/i)) {
+            const code = char.charCodeAt(0);
+            const isUpperCase = (code >= 65 && code <= 90);
+            const base = isUpperCase ? 65 : 97;
+            return String.fromCharCode(((code - base + shift) % 26) + base);
+        }
+        return char;
+    }).join('');
+}
+
+// Check if text starts with spoiler tag and cipher it
+function processSpoilerText(text) {
+    if (!extension_settings[extensionName].enabled) {
+        return text; // Extension disabled, return original
+    }
+    
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    const shift = extension_settings[extensionName].cipherShift;
+    
+    if (text.startsWith(spoilerTag)) {
+        // Remove the tag and cipher the rest
+        const contentWithoutTag = text.slice(spoilerTag.length);
+        const cipheredContent = caesarCipher(contentWithoutTag, shift);
+        return spoilerTag + cipheredContent;
+    }
+    
+    return text; // No spoiler tag, return original
+}
+
+// Decipher text (reverse Caesar cipher)
+function decipherSpoilerText(text) {
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    const shift = extension_settings[extensionName].cipherShift;
+    
+    if (text.startsWith(spoilerTag)) {
+        const contentWithoutTag = text.slice(spoilerTag.length);
+        const decipheredContent = caesarCipher(contentWithoutTag, -shift);
+        return spoilerTag + decipheredContent;
+    }
+    
+    return text;
+}
+
+// Test button handler
+function onTestButtonClick() {
+    const testText = $("#lore_spoilers_test").val();
+    
+    if (!testText) {
+        toastr.warning("Please enter some text to test", "Lore Spoilers");
+        return;
+    }
+    
+    const processed = processSpoilerText(testText);
+    $("#lore_spoilers_test").val(processed);
+    
+    console.log(`[${extensionName}] Test cipher - Original:`, testText);
+    console.log(`[${extensionName}] Test cipher - Processed:`, processed);
+    
+    toastr.success("Text ciphered! Click again to decipher.", "Lore Spoilers");
+}
+
 // Extension initialization
 jQuery(async () => {
     console.log(`[${extensionName}] Loading...`);
@@ -70,6 +134,9 @@ jQuery(async () => {
         // Bind text input events
         $("#lore_spoilers_tag").on("input", onSpoilerTagChange);
         $("#lore_spoilers_shift").on("input", onCipherShiftChange);
+        
+        // Bind test button
+        $("#lore_spoilers_test_button").on("click", onTestButtonClick);
        
         // Load saved settings
         loadSettings();
