@@ -117,6 +117,11 @@ function onTestButtonClick() {
     toastr.success("Text ciphered! Click again to decipher.", "Lore Spoilers");
 }
 
+// Manual hide button handler
+function onHideSpoilersClick() {
+    cipherAllVisibleEntries();
+}
+
 // Store original (plaintext) values for World Info entries
 const originalValues = new Map();
 
@@ -192,6 +197,58 @@ function onWorldInfoBlur(event) {
     }
 }
 
+// Handle input changes on World Info textarea (save plaintext as they type)
+function onWorldInfoInput(event) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const textarea = event.target;
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+    const currentValue = textarea.value;
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    
+    // If it starts with spoiler tag and we're tracking it, update the original
+    if (currentValue.startsWith(spoilerTag) && textareaId && originalValues.has(textareaId)) {
+        originalValues.set(textareaId, currentValue);
+    }
+}
+
+// Manually cipher all visible World Info entries (called by button or when leaving WI)
+function cipherAllVisibleEntries() {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    let cipheredCount = 0;
+    
+    textareas.forEach(textarea => {
+        const currentValue = textarea.value;
+        const spoilerTag = extension_settings[extensionName].spoilerTag;
+        
+        if (currentValue.startsWith(spoilerTag)) {
+            const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+            textarea.setAttribute('data-lore-spoiler-id', textareaId);
+            
+            // Store original and cipher
+            originalValues.set(textareaId, currentValue);
+            const ciphered = processSpoilerText(currentValue);
+            
+            // Only update if different (to avoid unnecessary changes)
+            if (textarea.value !== ciphered) {
+                textarea.value = ciphered;
+                cipheredCount++;
+            }
+        }
+    });
+    
+    if (cipheredCount > 0) {
+        console.log(`[${extensionName}] Manually ciphered ${cipheredCount} entries`);
+        toastr.success(`Ciphered ${cipheredCount} spoiler entries`, "Lore Spoilers");
+    }
+}
+
 // Monitor for World Info panel changes and new entries
 function setupWorldInfoMonitoring() {
     // Use MutationObserver to watch for new World Info entries
@@ -222,11 +279,11 @@ function attachWorldInfoListeners() {
     textareas.forEach(textarea => {
         // Remove old listeners to avoid duplicates
         textarea.removeEventListener('focus', onWorldInfoFocus);
-        textarea.removeEventListener('blur', onWorldInfoBlur);
+        textarea.removeEventListener('input', onWorldInfoInput);
         
         // Add new listeners
         textarea.addEventListener('focus', onWorldInfoFocus);
-        textarea.addEventListener('blur', onWorldInfoBlur);
+        textarea.addEventListener('input', onWorldInfoInput);
     });
 }
 
@@ -250,6 +307,9 @@ jQuery(async () => {
         
         // Bind test button
         $("#lore_spoilers_test_button").on("click", onTestButtonClick);
+        
+        // Bind hide spoilers button
+        $("#lore_spoilers_hide_button").on("click", onHideSpoilersClick);
        
         // Load saved settings
         loadSettings();
