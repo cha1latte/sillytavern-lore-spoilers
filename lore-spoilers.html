@@ -1,0 +1,50 @@
+<!-- Settings UI for Lore Spoilers -->
+<div class="lore-spoilers-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b data-i18n="lore_spoilers_title">Lore Spoilers</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <!-- Enable/Disable Checkbox -->
+            <div class="lore-spoilers_block flex-container">
+                <input id="lore_spoilers_enabled" type="checkbox" />
+                <label for="lore_spoilers_enabled" data-i18n="lore_spoilers_enable_label">
+                    Enable Lore Spoilers
+                </label>
+            </div>
+
+            <!-- Spoiler Tag Input -->
+            <div class="lore-spoilers_block">
+                <label for="lore_spoilers_tag" data-i18n="lore_spoilers_tag_label">
+                    Spoiler Tag:
+                </label>
+                <input id="lore_spoilers_tag" type="text" class="text_pole"
+                       placeholder="[SPOILER]" />
+            </div>
+
+            <!-- Cipher Shift Slider -->
+            <div class="lore-spoilers_block">
+                <label for="lore_spoilers_shift" data-i18n="lore_spoilers_shift_label">
+                    Caesar Cipher Shift: <span id="lore_spoilers_shift_value">13</span>
+                </label>
+                <input id="lore_spoilers_shift" type="range" min="1" max="25"
+                       value="13" class="slider" />
+            </div>
+
+            <!-- Help Text -->
+            <small class="notes" data-i18n="lore_spoilers_help_text">
+                How to use:
+                <br>1. Add your spoiler tag (e.g., "[SPOILER]") to the *start* of a World Info entry's content.
+                <br>2. Write your plaintext spoiler after the tag.
+                <br>3. Click out of the box (blur). The text will be hidden.
+                <br>4. Click back into the box (focus) to reveal and edit.
+                <br>
+                <b>The LLM will always see the original, un-hidden text.</b>
+            </small>
+
+            <hr class="sysHR" />
+        </div>
+    </div>
+</div>
