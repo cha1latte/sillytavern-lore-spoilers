@@ -217,17 +217,48 @@ function onWorldInfoInput(event) {
 // Manually cipher all visible World Info entries (called by button or when leaving WI)
 function cipherAllVisibleEntries() {
     if (!extension_settings[extensionName].enabled) {
+        console.log(`[${extensionName}] Extension disabled, skipping cipher`);
         return;
     }
     
-    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    console.log(`[${extensionName}] Starting manual cipher...`);
+    
+    // Try multiple selectors to find World Info textareas
+    const selectors = [
+        'textarea[name="world_info_entry_content"]',
+        'textarea[id*="world_info"]',
+        'textarea.world_entry_form_control',
+        '#world_popup textarea',
+        '.world_entry textarea'
+    ];
+    
+    let textareas = [];
+    for (const selector of selectors) {
+        const found = document.querySelectorAll(selector);
+        if (found.length > 0) {
+            console.log(`[${extensionName}] Found ${found.length} textareas with selector: ${selector}`);
+            textareas = Array.from(found);
+            break;
+        }
+    }
+    
+    if (textareas.length === 0) {
+        console.log(`[${extensionName}] No World Info textareas found`);
+        toastr.warning("No World Info entries found. Make sure World Info panel is open.", "Lore Spoilers");
+        return;
+    }
+    
+    console.log(`[${extensionName}] Processing ${textareas.length} textareas`);
     let cipheredCount = 0;
     
-    textareas.forEach(textarea => {
+    textareas.forEach((textarea, index) => {
         const currentValue = textarea.value;
+        console.log(`[${extensionName}] Textarea ${index}: "${currentValue.substring(0, 50)}..."`);
+        
         const spoilerTag = extension_settings[extensionName].spoilerTag;
         
         if (currentValue.startsWith(spoilerTag)) {
+            console.log(`[${extensionName}] Textarea ${index} has spoiler tag`);
             const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
             textarea.setAttribute('data-lore-spoiler-id', textareaId);
             
@@ -235,17 +266,30 @@ function cipherAllVisibleEntries() {
             originalValues.set(textareaId, currentValue);
             const ciphered = processSpoilerText(currentValue);
             
+            console.log(`[${extensionName}] Original: ${currentValue.substring(0, 50)}`);
+            console.log(`[${extensionName}] Ciphered: ${ciphered.substring(0, 50)}`);
+            
             // Only update if different (to avoid unnecessary changes)
             if (textarea.value !== ciphered) {
                 textarea.value = ciphered;
+                // Trigger change event so SillyTavern knows the value changed
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
                 cipheredCount++;
+                console.log(`[${extensionName}] Successfully ciphered textarea ${index}`);
+            } else {
+                console.log(`[${extensionName}] Textarea ${index} already ciphered`);
             }
+        } else {
+            console.log(`[${extensionName}] Textarea ${index} does not start with spoiler tag "${spoilerTag}"`);
         }
     });
     
     if (cipheredCount > 0) {
         console.log(`[${extensionName}] Manually ciphered ${cipheredCount} entries`);
         toastr.success(`Ciphered ${cipheredCount} spoiler entries`, "Lore Spoilers");
+    } else {
+        console.log(`[${extensionName}] No entries were ciphered`);
+        toastr.info("No spoiler entries found to cipher", "Lore Spoilers");
     }
 }
 
