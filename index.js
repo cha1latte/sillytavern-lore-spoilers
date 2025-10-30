@@ -329,6 +329,76 @@ function setupWorldInfoMonitoring() {
     attachWorldInfoListeners();
 }
 
+// Hook into SillyTavern's World Info processing to send plaintext to LLM
+function setupLLMPlaintextHook() {
+    const context = getContext();
+    
+    // Register a middleware to process World Info before sending to LLM
+    if (context && context.registerSlashCommand) {
+        console.log(`[${extensionName}] Setting up LLM plaintext hook...`);
+        
+        // Store reference to original world info getter if it exists
+        if (window.world_info_data) {
+            console.log(`[${extensionName}] Found world_info_data`);
+        }
+    }
+    
+    // Intercept by patching the textarea values right before message send
+    const originalSend = $.ajax;
+    $.ajax = function(options) {
+        // Check if this is a message being sent to the LLM
+        if (options && options.url && (options.url.includes('/generate') || options.url.includes('/api/completions'))) {
+            console.log(`[${extensionName}] Intercepting LLM request`);
+            
+            // Replace any ciphered World Info with plaintext in the request
+            if (options.data) {
+                let data = options.data;
+                if (typeof data === 'string') {
+                    try {
+                        data = JSON.parse(data);
+                    } catch (e) {
+                        // Not JSON, skip
+                    }
+                }
+                
+                // Replace ciphered text with plaintext from our stored originals
+                const spoilerTag = extension_settings[extensionName].spoilerTag;
+                if (data.prompt || data.messages) {
+                    originalValues.forEach((plaintext, id) => {
+                        const ciphered = processSpoilerText(plaintext);
+                        
+                        // Replace in prompt
+                        if (data.prompt && typeof data.prompt === 'string') {
+                            if (data.prompt.includes(ciphered)) {
+                                data.prompt = data.prompt.replace(ciphered, plaintext);
+                                console.log(`[${extensionName}] Replaced ciphered text with plaintext in prompt`);
+                            }
+                        }
+                        
+                        // Replace in messages array
+                        if (data.messages && Array.isArray(data.messages)) {
+                            data.messages.forEach(msg => {
+                                if (msg.content && typeof msg.content === 'string') {
+                                    if (msg.content.includes(ciphered)) {
+                                        msg.content = msg.content.replace(ciphered, plaintext);
+                                        console.log(`[${extensionName}] Replaced ciphered text with plaintext in message`);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    
+                    options.data = typeof options.data === 'string' ? JSON.stringify(data) : data;
+                }
+            }
+        }
+        
+        return originalSend.apply(this, arguments);
+    };
+    
+    console.log(`[${extensionName}] LLM plaintext hook installed`);
+}
+
 // Attach focus/blur listeners to World Info textareas
 function attachWorldInfoListeners() {
     const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
@@ -373,6 +443,9 @@ jQuery(async () => {
         
         // Setup World Info monitoring
         setupWorldInfoMonitoring();
+        
+        // Setup LLM plaintext hook
+        setupLLMPlaintextHook();
        
         console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
