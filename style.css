@@ -1,21 +1,2 @@
-/* Custom styles for Lore Spoilers extension */
-
-.lore-spoilers-settings .lore-spoilers_block {
-    margin: 10px 0;
-    padding: 5px;
-}
-
-.lore-spoilers_block label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-/* This class is applied to the textarea when a spoiler is hidden */
-textarea.lore-spoiler-hidden {
-    font-family: monospace;
-    background-color: #1e1e1e !important;
-    color: #4a4a4a !important;
-    font-style: italic;
-    resize: none;
-}
+/* Styles for Lore Spoilers extension */
+/* Empty for now - add styles later as needed */
