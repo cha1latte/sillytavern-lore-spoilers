@@ -367,48 +367,79 @@ function setupLLMPlaintextHook() {
 // Patch World Info retrieval to return plaintext for spoiler entries
 function patchWorldInfoRetrieval() {
     console.log(`[${extensionName}] Attempting to patch World Info retrieval...`);
+    console.log(`[${extensionName}] world_info type:`, typeof world_info);
+    console.log(`[${extensionName}] world_info keys:`, world_info ? Object.keys(world_info) : 'null');
+    console.log(`[${extensionName}] world_info object:`, world_info);
     
-    // Store reference to the original world_info entries
-    if (typeof world_info === 'undefined' || !world_info || !world_info.globalSelect) {
-        console.log(`[${extensionName}] World Info structure not as expected`);
+    if (typeof world_info === 'undefined' || !world_info) {
+        console.log(`[${extensionName}] World Info is undefined or null`);
         return;
     }
     
-    // Store original function if it exists
-    const originalGetEntries = world_info.getEntries;
+    // Try to find functions in world_info
+    const functions = [];
+    for (const key in world_info) {
+        if (typeof world_info[key] === 'function') {
+            functions.push(key);
+        }
+    }
+    console.log(`[${extensionName}] world_info functions:`, functions);
     
-    // Monkey-patch to intercept World Info entries
-    if (originalGetEntries) {
-        world_info.getEntries = function(...args) {
-            const entries = originalGetEntries.apply(this, args);
+    // Try multiple possible function names
+    const possibleFunctions = ['getEntries', 'getWorldInfoPrompt', 'checkWorldInfo', 'processWorldInfo', 'setWorldInfoSettings'];
+    
+    for (const funcName of possibleFunctions) {
+        if (world_info[funcName] && typeof world_info[funcName] === 'function') {
+            console.log(`[${extensionName}] Found function: ${funcName}`);
             
-            if (!extension_settings[extensionName].enabled) {
-                return entries;
-            }
-            
-            // Replace ciphered content with plaintext
-            entries.forEach(entry => {
-                if (entry.content) {
-                    const spoilerTag = extension_settings[extensionName].spoilerTag;
-                    if (entry.content.startsWith(spoilerTag)) {
-                        // Find if we have the plaintext version stored
-                        originalValues.forEach((plaintext, id) => {
-                            const ciphered = processSpoilerText(plaintext);
-                            if (entry.content === ciphered) {
-                                entry.content = plaintext;
-                                console.log(`[${extensionName}] ✅ Replaced ciphered WI entry with plaintext for LLM`);
-                            }
-                        });
-                    }
+            // Patch this function
+            const originalFunc = world_info[funcName];
+            world_info[funcName] = function(...args) {
+                const result = originalFunc.apply(this, args);
+                
+                if (!extension_settings[extensionName]?.enabled) {
+                    return result;
                 }
-            });
+                
+                console.log(`[${extensionName}] ${funcName} called, result type:`, typeof result);
+                
+                // If result is an array of entries
+                if (Array.isArray(result)) {
+                    result.forEach((entry, idx) => {
+                        if (entry && entry.content) {
+                            const spoilerTag = extension_settings[extensionName].spoilerTag;
+                            if (entry.content.startsWith(spoilerTag)) {
+                                // Find if we have the plaintext version stored
+                                originalValues.forEach((plaintext, id) => {
+                                    const ciphered = processSpoilerText(plaintext);
+                                    if (entry.content === ciphered) {
+                                        entry.content = plaintext;
+                                        console.log(`[${extensionName}] ✅ Replaced ciphered WI entry ${idx} with plaintext for LLM`);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                // If result is a string (prompt)
+                if (typeof result === 'string') {
+                    let modifiedResult = result;
+                    originalValues.forEach((plaintext, id) => {
+                        const ciphered = processSpoilerText(plaintext);
+                        if (modifiedResult.includes(ciphered)) {
+                            modifiedResult = modifiedResult.replace(new RegExp(ciphered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), plaintext);
+                            console.log(`[${extensionName}] ✅ Replaced ciphered text in WI prompt string`);
+                        }
+                    });
+                    return modifiedResult;
+                }
+                
+                return result;
+            };
             
-            return entries;
-        };
-        
-        console.log(`[${extensionName}] ✅ Successfully patched world_info.getEntries`);
-    } else {
-        console.log(`[${extensionName}] Could not find world_info.getEntries function`);
+            console.log(`[${extensionName}] ✅ Successfully patched world_info.${funcName}`);
+        }
     }
 }
 
