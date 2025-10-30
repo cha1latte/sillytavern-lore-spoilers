@@ -33,7 +33,7 @@ Once Stage 1 is confirmed working, we'll add:
 ## Current Status
 
 ✅ Stage 1: Basic drawer appears in Extensions settings
-⏳ Stage 2: Add basic settings (enable checkbox)
+✅ Stage 2: Add basic settings (enable checkbox)
 ⏳ Stage 3: Add configuration options
 ⏳ Stage 4: Implement spoiler detection
 ⏳ Stage 5: Implement Caesar cipher
