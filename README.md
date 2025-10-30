@@ -1,41 +1,53 @@
 # Lore Spoilers
 
-This SillyTavern extension hides World Info (Lorebook) entries from the user's UI to prevent spoilers, while still sending the original, un-hidden plaintext to the LLM.
+This SillyTavern extension hides World Info (Lorebook) entries from your UI to prevent spoilers, while the LLM always receives the original, unobfuscated plaintext.
+
+Perfect for scenarios where you want the AI to know about future plot twists, secret character knowledge, or story branches without spoiling them for yourself.
+
+## Features
+
+- **Spoiler Hiding**: Automatically ciphers and hides the content of any World Info entry that starts with a specific tag (e.g., `[SPOILER]`)
+- **Caesar Cipher**: Uses a classic Caesar cipher to obfuscate text in the UI (configurable shift 1-25)
+- **Configurable Tag**: Set your own spoiler tag
+- **Click to Reveal**: Click into a hidden entry to instantly reveal the original plaintext for editing
+- **LLM Sees All**: The LLM always receives the original, unobfuscated plaintext for full context
+- **Simple UI**: One-click button to hide all spoilers when you're done editing
 
 ## Installation
 
 1. Open SillyTavern
 2. Go to Extensions → Install Extension
-3. Paste the GitHub URL for this repository
+3. Paste this repository URL: `https://github.com/your-username/lore-spoilers`
 4. Click Install
 5. Refresh the page
 
-## Testing Stage 1
+## Usage
 
-After installation:
+1. Navigate to the Extensions panel, then click Extension Settings (cog icon)
+2. Find "Lore Spoilers" in the right-hand (UI) column
+3. Enable the "Enable Lore Spoilers" checkbox
+4. (Optional) Configure your preferred Spoiler Tag and Caesar Cipher Shift
+5. Go to the World Info panel (book icon)
+6. Create a new entry or edit an existing one
+7. In the "Content" textarea, add your spoiler tag to the very beginning (e.g., `[SPOILER]Vader is Luke's father`)
+8. Click the "🔒 Hide All Spoilers Now" button in Extension Settings
+9. The content will be replaced with ciphered text in your UI
+10. Click back into the textarea anytime to reveal and edit
+11. The LLM always receives the plaintext version automatically!
 
-1. Open Extensions settings (top-right icon)
-2. Click Extension Settings (cog icon)
-3. Look for "Lore Spoilers" in the right panel
-4. The drawer should appear with a success message
-5. Open browser console (F12) and look for `[lore-spoilers] ✅ Loaded successfully`
+## How It Works
 
-## What's Next
+This extension only ciphers what you see in the UI. The World Info database always stores plaintext, so when SillyTavern sends context to the LLM, it automatically includes the unobfuscated spoilers.
 
-Once Stage 1 is confirmed working, we'll add:
-- Settings to enable/disable the extension
-- Configuration for spoiler tags
-- Caesar cipher shift setting
-- The actual spoiler hiding functionality
+## Requirements
 
-## Current Status
+- SillyTavern 1.12.0 or higher
 
-✅ Stage 1: Basic drawer appears in Extensions settings
-✅ Stage 2: Add basic settings (enable checkbox)
-✅ Stage 3: Add configuration options (spoiler tag & cipher shift)
-✅ Stage 4: Implement spoiler detection
-✅ Stage 5: Implement Caesar cipher
-✅ Stage 6: Implement click-to-reveal in World Info
-✅ Stage 7: Implement LLM plaintext sending
+## Configuration
 
-🎉 **Extension Complete!** All features implemented and tested.
+- **Spoiler Tag**: The tag that marks entries as spoilers (default: `[SPOILER]`)
+- **Caesar Cipher Shift**: Number of positions to shift letters (default: 13 / ROT13)
+
+## License
+
+MIT
