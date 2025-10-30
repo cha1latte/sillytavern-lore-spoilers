@@ -122,10 +122,11 @@ function onHideSpoilersClick() {
     cipherAllVisibleEntries();
 }
 
-// Store original (plaintext) values for World Info entries
-const originalValues = new Map();
+// Store original (plaintext) values for World Info entries - FOR DISPLAY ONLY
+// The actual World Info database always keeps plaintext
+const displayCipheredTextareas = new Map();
 
-// Process World Info textareas
+// Process World Info textareas - ONLY for visual display
 function processWorldInfoEntries() {
     if (!extension_settings[extensionName].enabled) {
         return;
@@ -135,22 +136,20 @@ function processWorldInfoEntries() {
     const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
     
     textareas.forEach(textarea => {
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+        textarea.setAttribute('data-lore-spoiler-id', textareaId);
+        
+        // Check if we should cipher this for display
         const currentValue = textarea.value;
         const spoilerTag = extension_settings[extensionName].spoilerTag;
         
-        // Only process if it starts with spoiler tag and isn't already ciphered
-        if (currentValue.startsWith(spoilerTag)) {
-            // Check if we've already stored the original
-            const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
-            textarea.setAttribute('data-lore-spoiler-id', textareaId);
-            
-            // If not in our map, this is a fresh entry - store original and cipher it
-            if (!originalValues.has(textareaId)) {
-                originalValues.set(textareaId, currentValue);
-                const ciphered = processSpoilerText(currentValue);
-                textarea.value = ciphered;
-                console.log(`[${extensionName}] Ciphered entry:`, textareaId);
-            }
+        if (currentValue.startsWith(spoilerTag) && !displayCipheredTextareas.has(textareaId)) {
+            // This is a new spoiler entry - track it
+            displayCipheredTextareas.set(textareaId, {
+                plaintext: currentValue,
+                ciphered: processSpoilerText(currentValue),
+                isRevealed: false
+            });
         }
     });
 }
@@ -164,40 +163,16 @@ function onWorldInfoFocus(event) {
     const textarea = event.target;
     const textareaId = textarea.getAttribute('data-lore-spoiler-id');
     
-    if (textareaId && originalValues.has(textareaId)) {
-        textarea.value = originalValues.get(textareaId);
-        console.log(`[${extensionName}] Revealed entry:`, textareaId);
+    if (textareaId && displayCipheredTextareas.has(textareaId)) {
+        const data = displayCipheredTextareas.get(textareaId);
+        // Show plaintext for editing
+        textarea.value = data.plaintext;
+        data.isRevealed = true;
+        console.log(`[${extensionName}] Revealed entry for editing:`, textareaId);
     }
 }
 
-// Handle blur on World Info textarea (re-cipher)
-function onWorldInfoBlur(event) {
-    if (!extension_settings[extensionName].enabled) {
-        return;
-    }
-    
-    const textarea = event.target;
-    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
-    const currentValue = textarea.value;
-    const spoilerTag = extension_settings[extensionName].spoilerTag;
-    
-    // Update original value and re-cipher
-    if (currentValue.startsWith(spoilerTag)) {
-        if (!textareaId) {
-            const newId = `lore_${Date.now()}_${Math.random()}`;
-            textarea.setAttribute('data-lore-spoiler-id', newId);
-            originalValues.set(newId, currentValue);
-        } else {
-            originalValues.set(textareaId, currentValue);
-        }
-        
-        const ciphered = processSpoilerText(currentValue);
-        textarea.value = ciphered;
-        console.log(`[${extensionName}] Re-ciphered entry:`, textareaId);
-    }
-}
-
-// Handle input changes on World Info textarea (save plaintext as they type)
+// Handle input changes - update our plaintext tracking
 function onWorldInfoInput(event) {
     if (!extension_settings[extensionName].enabled) {
         return;
@@ -208,20 +183,39 @@ function onWorldInfoInput(event) {
     const currentValue = textarea.value;
     const spoilerTag = extension_settings[extensionName].spoilerTag;
     
-    // If it starts with spoiler tag and we're tracking it, update the original
-    if (currentValue.startsWith(spoilerTag) && textareaId && originalValues.has(textareaId)) {
-        originalValues.set(textareaId, currentValue);
+    if (currentValue.startsWith(spoilerTag)) {
+        if (!textareaId) {
+            const newId = `lore_${Date.now()}_${Math.random()}`;
+            textarea.setAttribute('data-lore-spoiler-id', newId);
+            displayCipheredTextareas.set(newId, {
+                plaintext: currentValue,
+                ciphered: processSpoilerText(currentValue),
+                isRevealed: true
+            });
+        } else if (displayCipheredTextareas.has(textareaId)) {
+            // Update tracked plaintext
+            const data = displayCipheredTextareas.get(textareaId);
+            data.plaintext = currentValue;
+            data.ciphered = processSpoilerText(currentValue);
+        } else {
+            displayCipheredTextareas.set(textareaId, {
+                plaintext: currentValue,
+                ciphered: processSpoilerText(currentValue),
+                isRevealed: true
+            });
+        }
     }
 }
 
 // Manually cipher all visible World Info entries (called by button or when leaving WI)
+// NOTE: This only ciphers the DISPLAY. The actual WI database stays plaintext for the LLM.
 function cipherAllVisibleEntries() {
     if (!extension_settings[extensionName].enabled) {
         console.log(`[${extensionName}] Extension disabled, skipping cipher`);
         return;
     }
     
-    console.log(`[${extensionName}] Starting manual cipher...`);
+    console.log(`[${extensionName}] Starting manual cipher (display only)...`);
     
     // Try multiple selectors to find World Info textareas
     const selectors = [
@@ -254,52 +248,37 @@ function cipherAllVisibleEntries() {
     textareas.forEach((textarea, index) => {
         const currentValue = textarea.value;
         const valueLength = currentValue ? currentValue.length : 0;
-        console.log(`[${extensionName}] Textarea ${index}: length=${valueLength}, value="${currentValue.substring(0, 100)}"`);
         
         const spoilerTag = extension_settings[extensionName].spoilerTag;
         
         // Skip empty textareas
         if (!currentValue || currentValue.trim().length === 0) {
-            console.log(`[${extensionName}] Textarea ${index} is empty, skipping`);
             return;
         }
         
         if (currentValue.startsWith(spoilerTag)) {
-            console.log(`[${extensionName}] Textarea ${index} has spoiler tag`);
             const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
             textarea.setAttribute('data-lore-spoiler-id', textareaId);
             
-            // Store original and cipher
-            originalValues.set(textareaId, currentValue);
+            // Track this entry
             const ciphered = processSpoilerText(currentValue);
+            displayCipheredTextareas.set(textareaId, {
+                plaintext: currentValue,
+                ciphered: ciphered,
+                isRevealed: false
+            });
             
-            console.log(`[${extensionName}] Original: ${currentValue.substring(0, 100)}`);
-            console.log(`[${extensionName}] Ciphered: ${ciphered.substring(0, 100)}`);
-            
-            // Update textarea value
+            // Update textarea DISPLAY to show ciphered (but don't save yet)
             textarea.value = ciphered;
             
-            // Trigger events so SillyTavern knows the value changed
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            textarea.dispatchEvent(new Event('change', { bubbles: true }));
-            
-            // Force focus and blur to trigger ST's save
-            setTimeout(() => {
-                textarea.focus();
-                textarea.blur();
-            }, 100);
-            
             cipheredCount++;
-            console.log(`[${extensionName}] Successfully ciphered textarea ${index}`);
-        } else {
-            console.log(`[${extensionName}] Textarea ${index} does not start with spoiler tag "${spoilerTag}"`);
-            console.log(`[${extensionName}] First 20 chars: "${currentValue.substring(0, 20)}"`);
+            console.log(`[${extensionName}] Ciphered display for textarea ${index}`);
         }
     });
     
     if (cipheredCount > 0) {
-        console.log(`[${extensionName}] Manually ciphered ${cipheredCount} entries`);
-        toastr.success(`Ciphered ${cipheredCount} spoiler entries`, "Lore Spoilers");
+        console.log(`[${extensionName}] Ciphered ${cipheredCount} entries for display`);
+        toastr.success(`Ciphered ${cipheredCount} spoiler entries (UI only - LLM sees plaintext)`, "Lore Spoilers");
     } else {
         console.log(`[${extensionName}] No entries were ciphered`);
         toastr.info("No spoiler entries found to cipher. Make sure entries start with: " + extension_settings[extensionName].spoilerTag, "Lore Spoilers");
@@ -329,118 +308,13 @@ function setupWorldInfoMonitoring() {
     attachWorldInfoListeners();
 }
 
-// Hook into SillyTavern's World Info processing to send plaintext to LLM
+// NO LLM HOOK NEEDED!
+// Since we only cipher the UI display and never save ciphered text to the database,
+// the LLM automatically receives plaintext from the World Info system.
 function setupLLMPlaintextHook() {
-    console.log(`[${extensionName}] Setting up World Info plaintext hook...`);
-    console.log(`[${extensionName}] Currently tracking ${originalValues.size} spoiler entries`);
-    
-    // Hook into the world info data when it's being retrieved for context building
-    // We need to patch the world info entries as they're being read
-    const context = getContext();
-    
-    if (!context || !context.eventSource) {
-        console.log(`[${extensionName}] Warning: Context or eventSource not available`);
-    }
-    
-    // Listen for chat generation events to intercept world info
-    const originalEventListener = context?.eventSource?.on?.bind(context.eventSource);
-    
-    // Try to hook into world info retrieval by monitoring when entries are saved
-    // Store a reference to modify world info before it's sent to LLM
-    const checkInterval = setInterval(() => {
-        // Check if world_info global exists
-        if (typeof world_info !== 'undefined') {
-            console.log(`[${extensionName}] Found world_info global object`);
-            clearInterval(checkInterval);
-            patchWorldInfoRetrieval();
-        }
-    }, 1000);
-    
-    // Timeout after 10 seconds
-    setTimeout(() => {
-        clearInterval(checkInterval);
-    }, 10000);
-    
-    console.log(`[${extensionName}] ✅ World Info hook setup initiated`);
-}
-
-// Patch World Info retrieval to return plaintext for spoiler entries
-function patchWorldInfoRetrieval() {
-    console.log(`[${extensionName}] Attempting to patch World Info retrieval...`);
-    console.log(`[${extensionName}] world_info type:`, typeof world_info);
-    console.log(`[${extensionName}] world_info keys:`, world_info ? Object.keys(world_info) : 'null');
-    console.log(`[${extensionName}] world_info object:`, world_info);
-    
-    if (typeof world_info === 'undefined' || !world_info) {
-        console.log(`[${extensionName}] World Info is undefined or null`);
-        return;
-    }
-    
-    // Try to find functions in world_info
-    const functions = [];
-    for (const key in world_info) {
-        if (typeof world_info[key] === 'function') {
-            functions.push(key);
-        }
-    }
-    console.log(`[${extensionName}] world_info functions:`, functions);
-    
-    // Try multiple possible function names
-    const possibleFunctions = ['getEntries', 'getWorldInfoPrompt', 'checkWorldInfo', 'processWorldInfo', 'setWorldInfoSettings'];
-    
-    for (const funcName of possibleFunctions) {
-        if (world_info[funcName] && typeof world_info[funcName] === 'function') {
-            console.log(`[${extensionName}] Found function: ${funcName}`);
-            
-            // Patch this function
-            const originalFunc = world_info[funcName];
-            world_info[funcName] = function(...args) {
-                const result = originalFunc.apply(this, args);
-                
-                if (!extension_settings[extensionName]?.enabled) {
-                    return result;
-                }
-                
-                console.log(`[${extensionName}] ${funcName} called, result type:`, typeof result);
-                
-                // If result is an array of entries
-                if (Array.isArray(result)) {
-                    result.forEach((entry, idx) => {
-                        if (entry && entry.content) {
-                            const spoilerTag = extension_settings[extensionName].spoilerTag;
-                            if (entry.content.startsWith(spoilerTag)) {
-                                // Find if we have the plaintext version stored
-                                originalValues.forEach((plaintext, id) => {
-                                    const ciphered = processSpoilerText(plaintext);
-                                    if (entry.content === ciphered) {
-                                        entry.content = plaintext;
-                                        console.log(`[${extensionName}] ✅ Replaced ciphered WI entry ${idx} with plaintext for LLM`);
-                                    }
-                                });
-                            }
-                        }
-                    });
-                }
-                
-                // If result is a string (prompt)
-                if (typeof result === 'string') {
-                    let modifiedResult = result;
-                    originalValues.forEach((plaintext, id) => {
-                        const ciphered = processSpoilerText(plaintext);
-                        if (modifiedResult.includes(ciphered)) {
-                            modifiedResult = modifiedResult.replace(new RegExp(ciphered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), plaintext);
-                            console.log(`[${extensionName}] ✅ Replaced ciphered text in WI prompt string`);
-                        }
-                    });
-                    return modifiedResult;
-                }
-                
-                return result;
-            };
-            
-            console.log(`[${extensionName}] ✅ Successfully patched world_info.${funcName}`);
-        }
-    }
+    console.log(`[${extensionName}] 📝 Note: LLM receives plaintext automatically`);
+    console.log(`[${extensionName}] This extension only ciphers the UI display, not the saved data`);
+    console.log(`[${extensionName}] World Info database always contains plaintext for the LLM`);
 }
 
 // Attach focus/blur listeners to World Info textareas
