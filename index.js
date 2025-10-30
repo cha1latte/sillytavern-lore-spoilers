@@ -291,6 +291,7 @@ function setupWorldInfoMonitoring() {
     const observer = new MutationObserver((mutations) => {
         processWorldInfoEntries();
         attachWorldInfoListeners();
+        attachSaveButtonListeners();
     });
     
     // Observe the world info container
@@ -306,6 +307,45 @@ function setupWorldInfoMonitoring() {
     // Initial processing
     processWorldInfoEntries();
     attachWorldInfoListeners();
+    attachSaveButtonListeners();
+}
+
+// Attach listeners to save/close buttons to restore plaintext before save
+function attachSaveButtonListeners() {
+    // Find all World Info save/close buttons
+    const buttons = document.querySelectorAll('.world_entry_form_control button, .world_popup_close, .world_popup_save');
+    
+    buttons.forEach(button => {
+        // Remove old listener
+        button.removeEventListener('click', onWorldInfoSaveClick);
+        
+        // Add new listener with capture phase (runs before ST's handler)
+        button.addEventListener('click', onWorldInfoSaveClick, true);
+    });
+}
+
+// Before WI is saved, restore plaintext to textarea
+function onWorldInfoSaveClick(event) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    console.log(`[${extensionName}] Save button clicked, restoring plaintext...`);
+    
+    // Find all textareas and restore plaintext
+    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    
+    textareas.forEach(textarea => {
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+        
+        if (textareaId && displayCipheredTextareas.has(textareaId)) {
+            const data = displayCipheredTextareas.get(textareaId);
+            
+            // Restore plaintext so ST saves it
+            textarea.value = data.plaintext;
+            console.log(`[${extensionName}] ✅ Restored plaintext for save:`, textareaId);
+        }
+    });
 }
 
 // NO LLM HOOK NEEDED!
@@ -325,11 +365,41 @@ function attachWorldInfoListeners() {
         // Remove old listeners to avoid duplicates
         textarea.removeEventListener('focus', onWorldInfoFocus);
         textarea.removeEventListener('input', onWorldInfoInput);
+        textarea.removeEventListener('blur', onWorldInfoBlur);
         
         // Add new listeners
         textarea.addEventListener('focus', onWorldInfoFocus);
         textarea.addEventListener('input', onWorldInfoInput);
+        textarea.addEventListener('blur', onWorldInfoBlur);
     });
+}
+
+// Handle blur - ensure plaintext is in textarea when saving
+function onWorldInfoBlur(event) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const textarea = event.target;
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+    
+    if (textareaId && displayCipheredTextareas.has(textareaId)) {
+        const data = displayCipheredTextareas.get(textareaId);
+        
+        // Put plaintext back in the textarea so ST saves the plaintext
+        textarea.value = data.plaintext;
+        data.isRevealed = false;
+        
+        console.log(`[${extensionName}] Restored plaintext for save:`, textareaId);
+        
+        // After a short delay, cipher the display again (after ST has read the value)
+        setTimeout(() => {
+            if (document.activeElement !== textarea) {
+                textarea.value = data.ciphered;
+                console.log(`[${extensionName}] Re-ciphered display after save:`, textareaId);
+            }
+        }, 100);
+    }
 }
 
 // Extension initialization
