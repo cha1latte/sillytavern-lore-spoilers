@@ -37,5 +37,5 @@ Once Stage 1 is confirmed working, we'll add:
 ✅ Stage 3: Add configuration options (spoiler tag & cipher shift)
 ✅ Stage 4: Implement spoiler detection
 ✅ Stage 5: Implement Caesar cipher
-⏳ Stage 6: Implement click-to-reveal in World Info
-⏳ Stage 7: Implement LLM plaintext sending
+✅ Stage 6: Implement click-to-reveal in World Info
+⏳ Stage 7: Implement LLM plaintext sending (final step)
