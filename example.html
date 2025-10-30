@@ -5,9 +5,12 @@
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
-            <p>✅ Extension loaded successfully!</p>
-            <p>If you can see this, the basic structure is working.</p>
-            <p><small>This extension will hide World Info spoilers from your UI while still sending them to the LLM.</small></p>
+            <div>
+                <input id="lore_spoilers_enabled" type="checkbox" />
+                <label for="lore_spoilers_enabled">Enable Lore Spoilers</label>
+            </div>
+            <p><small>Toggle this and refresh - it should remember your choice.</small></p>
+            <p><small>When enabled, World Info entries starting with a spoiler tag will be hidden in the UI but still sent to the LLM.</small></p>
         </div>
     </div>
 </div>
