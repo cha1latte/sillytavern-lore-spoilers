@@ -9,8 +9,21 @@
                 <input id="lore_spoilers_enabled" type="checkbox" />
                 <label for="lore_spoilers_enabled">Enable Lore Spoilers</label>
             </div>
-            <p><small>Toggle this and refresh - it should remember your choice.</small></p>
-            <p><small>When enabled, World Info entries starting with a spoiler tag will be hidden in the UI but still sent to the LLM.</small></p>
+            <p><small>When enabled, World Info entries starting with the spoiler tag will be hidden in the UI but still sent to the LLM.</small></p>
+            
+            <hr>
+            
+            <div>
+                <label for="lore_spoilers_tag"><strong>Spoiler Tag:</strong></label>
+                <input id="lore_spoilers_tag" class="text_pole" type="text" placeholder="[SPOILER]" />
+                <p><small>World Info entries starting with this tag will be hidden. Example: <code>[SPOILER]</code></small></p>
+            </div>
+            
+            <div>
+                <label for="lore_spoilers_shift"><strong>Caesar Cipher Shift (1-25):</strong></label>
+                <input id="lore_spoilers_shift" class="text_pole" type="number" min="1" max="25" />
+                <p><small>Number of positions to shift each letter. Default is 13 (ROT13).</small></p>
+            </div>
         </div>
     </div>
 </div>
