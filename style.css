@@ -1,2 +1,11 @@
 /* Styles for Lore Spoilers extension */
-/* Empty for now - add styles later as needed */
+
+/* Per-entry cipher button container */
+.lore-spoiler-cipher-btn {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.lore-spoiler-cipher-btn input {
+    font-size: 14px;
+}
