@@ -317,19 +317,21 @@ function injectCipherButtons() {
             return;
         }
         
-        // Find the textarea
-        const textarea = entry.querySelector('textarea[name="world_info_entry_content"]');
+        // Find the textarea - try multiple selectors
+        let textarea = entry.querySelector('textarea[name="comment"]');
         if (!textarea) {
-            console.log(`[${extensionName}] Entry ${idx} has no textarea with name="world_info_entry_content"`);
-            // Try alternative selectors
-            const altTextarea = entry.querySelector('textarea');
-            if (altTextarea) {
-                console.log(`[${extensionName}] Entry ${idx} has a textarea but different name: ${altTextarea.name || 'no name'}`);
-            }
+            textarea = entry.querySelector('textarea[name="world_info_entry_content"]');
+        }
+        if (!textarea) {
+            textarea = entry.querySelector('textarea');
+        }
+        
+        if (!textarea) {
+            console.log(`[${extensionName}] Entry ${idx} has no textarea at all`);
             return;
         }
         
-        console.log(`[${extensionName}] Adding button to entry ${idx}`);
+        console.log(`[${extensionName}] Adding button to entry ${idx}, textarea name: ${textarea.name || 'no name'}`);
         
         // Create cipher button
         const cipherBtn = document.createElement('div');
@@ -415,7 +417,7 @@ function onWorldInfoSaveClick(event) {
     }
     
     // Find all textareas and restore plaintext
-    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    const textareas = document.querySelectorAll('textarea[name="comment"], textarea[name="world_info_entry_content"], .world_entry textarea');
     
     textareas.forEach(textarea => {
         const textareaId = textarea.getAttribute('data-lore-spoiler-id');
@@ -438,7 +440,8 @@ function setupLLMPlaintextHook() {
 
 // Attach focus/blur listeners to World Info textareas
 function attachWorldInfoListeners() {
-    const textareas = document.querySelectorAll('textarea[name="world_info_entry_content"]');
+    // Try multiple selectors for textareas
+    const textareas = document.querySelectorAll('textarea[name="comment"], textarea[name="world_info_entry_content"], .world_entry textarea');
     
     textareas.forEach(textarea => {
         // Remove old listeners to avoid duplicates
