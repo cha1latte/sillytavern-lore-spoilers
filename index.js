@@ -533,13 +533,31 @@ function onWorldInfoBlur(event) {
 // Global function for inline onclick - defined here so onCipherEntryClick is already defined
 window.loreSpoilersCipherEntry = function(textareaGlobalId) {
     console.log(`[lore-spoilers] Global cipher function called for:`, textareaGlobalId);
-    const textarea = window[textareaGlobalId];
-    if (textarea) {
-        console.log(`[lore-spoilers] Found textarea, calling onCipherEntryClick`);
-        onCipherEntryClick(textarea);
-    } else {
-        console.error(`[lore-spoilers] Could not find textarea with id:`, textareaGlobalId);
+    const storedTextarea = window[textareaGlobalId];
+    
+    if (!storedTextarea) {
+        console.error(`[lore-spoilers] Could not find stored textarea with id:`, textareaGlobalId);
+        return;
     }
+    
+    // Find the current textarea in the DOM (might have been replaced)
+    const parent = storedTextarea.parentElement;
+    let currentTextarea = storedTextarea;
+    
+    if (parent) {
+        // Try to find textarea by name in the same parent
+        const freshTextarea = parent.querySelector('textarea[name="comment"]') || 
+                              parent.querySelector('textarea[name="world_info_entry_content"]') ||
+                              parent.querySelector('textarea');
+        
+        if (freshTextarea) {
+            currentTextarea = freshTextarea;
+            console.log(`[lore-spoilers] Found fresh textarea with value length:`, freshTextarea.value.length);
+        }
+    }
+    
+    console.log(`[lore-spoilers] Calling onCipherEntryClick with textarea value:`, currentTextarea.value.substring(0, 50));
+    onCipherEntryClick(currentTextarea);
 };
 
 // Extension initialization
