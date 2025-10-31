@@ -279,23 +279,57 @@ function setupWorldInfoMonitoring() {
 // Inject cipher buttons into World Info entries
 function injectCipherButtons() {
     if (!extension_settings[extensionName].enabled) {
+        console.log(`[${extensionName}] Extension disabled, skipping button injection`);
         return;
     }
     
-    // Find all World Info entry forms
-    const entries = document.querySelectorAll('.world_entry');
+    console.log(`[${extensionName}] Injecting cipher buttons...`);
     
-    entries.forEach((entry) => {
+    // Try multiple selectors to find World Info entries
+    const selectors = [
+        '.world_entry',
+        '.world_popup',
+        '#world_popup_entries_list .world_entry',
+        '.inline-drawer-content .world_entry'
+    ];
+    
+    let entries = [];
+    for (const selector of selectors) {
+        const found = document.querySelectorAll(selector);
+        if (found.length > 0) {
+            console.log(`[${extensionName}] Found ${found.length} entries with selector: ${selector}`);
+            entries = Array.from(found);
+            break;
+        }
+    }
+    
+    if (entries.length === 0) {
+        console.log(`[${extensionName}] No World Info entries found`);
+        return;
+    }
+    
+    console.log(`[${extensionName}] Processing ${entries.length} entries`);
+    
+    entries.forEach((entry, idx) => {
         // Check if we already added the button
         if (entry.querySelector('.lore-spoiler-cipher-btn')) {
+            console.log(`[${extensionName}] Entry ${idx} already has button`);
             return;
         }
         
         // Find the textarea
         const textarea = entry.querySelector('textarea[name="world_info_entry_content"]');
         if (!textarea) {
+            console.log(`[${extensionName}] Entry ${idx} has no textarea with name="world_info_entry_content"`);
+            // Try alternative selectors
+            const altTextarea = entry.querySelector('textarea');
+            if (altTextarea) {
+                console.log(`[${extensionName}] Entry ${idx} has a textarea but different name: ${altTextarea.name || 'no name'}`);
+            }
             return;
         }
+        
+        console.log(`[${extensionName}] Adding button to entry ${idx}`);
         
         // Create cipher button
         const cipherBtn = document.createElement('div');
@@ -304,18 +338,21 @@ function injectCipherButtons() {
             <input type="button" class="menu_button menu_button_icon" value="🔒 Cipher This Entry" title="Hide this entry with Caesar cipher" />
         `;
         
-        // Find a good place to insert the button (after the textarea)
-        const buttonContainer = entry.querySelector('.world_entry_form_control') || entry;
         const button = cipherBtn.querySelector('input');
         
         // Insert button after textarea
         if (textarea.parentElement) {
             textarea.parentElement.appendChild(cipherBtn);
+            console.log(`[${extensionName}] Button added to entry ${idx}`);
+        } else {
+            console.log(`[${extensionName}] Entry ${idx} textarea has no parent`);
         }
         
         // Attach click handler
         button.addEventListener('click', () => onCipherEntryClick(textarea));
     });
+    
+    console.log(`[${extensionName}] Button injection complete`);
 }
 
 // Handle clicking cipher button on individual entry
