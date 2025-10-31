@@ -128,12 +128,24 @@ function onCipherAllClick() {
         return;
     }
     
-    // Find ALL content textareas in the World Info panel (not just open entries)
-    const textareas = document.querySelectorAll('textarea[name="content"]');
-    console.log(`[lore-spoilers] Found ${textareas.length} textareas`);
+    // Find the World Info container first
+    const worldInfoContainer = document.querySelector('#world_popup') || 
+                               document.querySelector('#world_info') ||
+                               document.querySelector('.world_entries_container');
+    
+    console.log('[lore-spoilers] World Info container:', worldInfoContainer);
+    
+    if (!worldInfoContainer) {
+        toastr.warning("Could not find World Info panel. Make sure it's open.", "Lore Spoilers");
+        return;
+    }
+    
+    // Find ALL content textareas within the World Info container
+    const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
+    console.log(`[lore-spoilers] Found ${textareas.length} textareas in World Info`);
     
     if (textareas.length === 0) {
-        toastr.warning("No World Info entries found. Open the World Info panel first.", "Lore Spoilers");
+        toastr.warning("No World Info entries found. Open some entries in the lorebook.", "Lore Spoilers");
         return;
     }
     
