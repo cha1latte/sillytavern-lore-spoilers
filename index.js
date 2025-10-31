@@ -380,14 +380,27 @@ function injectCipherButtons() {
             console.log(`[${extensionName}] Entry ${idx} textarea has no parent`);
         }
         
-        // Attach click handler
+        // Attach click handler - try multiple methods
         console.log(`[${extensionName}] Attaching click handler to button for entry ${idx}`);
-        button.addEventListener('click', (e) => {
-            console.log(`[${extensionName}] Button click event fired for entry ${idx}`);
+        
+        const clickHandler = (e) => {
+            console.log(`[${extensionName}] *** BUTTON CLICKED *** for entry ${idx}`);
             e.preventDefault();
             e.stopPropagation();
             onCipherEntryClick(textarea);
+        };
+        
+        // Method 1: addEventListener for click
+        button.addEventListener('click', clickHandler);
+        
+        // Method 2: addEventListener for mousedown (backup)
+        button.addEventListener('mousedown', (e) => {
+            console.log(`[${extensionName}] *** BUTTON MOUSEDOWN *** for entry ${idx}`);
         });
+        
+        // Method 3: Direct onclick property (last resort)
+        button.onclick = clickHandler;
+        
         console.log(`[${extensionName}] Click handler attached for entry ${idx}`);
     });
     
