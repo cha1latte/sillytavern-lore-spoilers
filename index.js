@@ -363,18 +363,14 @@ function injectCipherButtons() {
         
         console.log(`[${extensionName}] Adding button to entry ${idx}, textarea name: ${textarea.name || 'no name'}`);
         
-        // Store textarea reference globally so onclick can access it
-        const textareaGlobalId = `lore_spoiler_textarea_${Date.now()}_${idx}`;
-        window[textareaGlobalId] = textarea;
-        
-        // Create cipher button with inline onclick
+        // Create cipher button with inline onclick - pass the button element itself
         const cipherBtn = document.createElement('div');
         cipherBtn.className = 'lore-spoiler-cipher-btn';
         cipherBtn.innerHTML = `
             <input type="button" class="menu_button menu_button_icon" 
                    value="🔒 Cipher This Entry" 
                    title="Hide this entry with Caesar cipher"
-                   onclick="console.log('[lore-spoilers] INLINE ONCLICK FIRED'); window.loreSpoilersCipherEntry('${textareaGlobalId}');" />
+                   onclick="console.log('[lore-spoilers] INLINE ONCLICK FIRED'); window.loreSpoilersCipherEntry(this);" />
         `;
         
         const button = cipherBtn.querySelector('input');
@@ -531,33 +527,41 @@ function onWorldInfoBlur(event) {
 }
 
 // Global function for inline onclick - defined here so onCipherEntryClick is already defined
-window.loreSpoilersCipherEntry = function(textareaGlobalId) {
-    console.log(`[lore-spoilers] Global cipher function called for:`, textareaGlobalId);
-    const storedTextarea = window[textareaGlobalId];
+window.loreSpoilersCipherEntry = function(buttonElement) {
+    console.log(`[lore-spoilers] Global cipher function called, button element:`, buttonElement);
     
-    if (!storedTextarea) {
-        console.error(`[lore-spoilers] Could not find stored textarea with id:`, textareaGlobalId);
-        return;
-    }
+    // Find the textarea - go up from button to parent, then find textarea sibling
+    let currentElement = buttonElement;
+    let textarea = null;
     
-    // Find the current textarea in the DOM (might have been replaced)
-    const parent = storedTextarea.parentElement;
-    let currentTextarea = storedTextarea;
-    
-    if (parent) {
-        // Try to find textarea by name in the same parent
-        const freshTextarea = parent.querySelector('textarea[name="comment"]') || 
-                              parent.querySelector('textarea[name="world_info_entry_content"]') ||
-                              parent.querySelector('textarea');
-        
-        if (freshTextarea) {
-            currentTextarea = freshTextarea;
-            console.log(`[lore-spoilers] Found fresh textarea with value length:`, freshTextarea.value.length);
+    // Try going up a few levels to find the world_entry container
+    for (let i = 0; i < 5; i++) {
+        if (currentElement.parentElement) {
+            currentElement = currentElement.parentElement;
+            console.log(`[lore-spoilers] Checking parent level ${i}, class:`, currentElement.className);
+            
+            // Look for textarea in this container
+            textarea = currentElement.querySelector('textarea[name="comment"]') || 
+                      currentElement.querySelector('textarea[name="world_info_entry_content"]') ||
+                      currentElement.querySelector('textarea');
+            
+            if (textarea) {
+                console.log(`[lore-spoilers] Found textarea at level ${i}, value length:`, textarea.value.length);
+                if (textarea.value && textarea.value.length > 0) {
+                    break;
+                }
+            }
         }
     }
     
-    console.log(`[lore-spoilers] Calling onCipherEntryClick with textarea value:`, currentTextarea.value.substring(0, 50));
-    onCipherEntryClick(currentTextarea);
+    if (!textarea) {
+        console.error(`[lore-spoilers] Could not find textarea relative to button`);
+        toastr.error("Could not find entry textarea", "Lore Spoilers");
+        return;
+    }
+    
+    console.log(`[lore-spoilers] Calling onCipherEntryClick with textarea value:`, textarea.value.substring(0, 50));
+    onCipherEntryClick(textarea);
 };
 
 // Extension initialization
