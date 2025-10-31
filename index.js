@@ -363,11 +363,18 @@ function injectCipherButtons() {
         
         console.log(`[${extensionName}] Adding button to entry ${idx}, textarea name: ${textarea.name || 'no name'}`);
         
-        // Create cipher button
+        // Store textarea reference globally so onclick can access it
+        const textareaGlobalId = `lore_spoiler_textarea_${Date.now()}_${idx}`;
+        window[textareaGlobalId] = textarea;
+        
+        // Create cipher button with inline onclick
         const cipherBtn = document.createElement('div');
         cipherBtn.className = 'lore-spoiler-cipher-btn';
         cipherBtn.innerHTML = `
-            <input type="button" class="menu_button menu_button_icon" value="🔒 Cipher This Entry" title="Hide this entry with Caesar cipher" />
+            <input type="button" class="menu_button menu_button_icon" 
+                   value="🔒 Cipher This Entry" 
+                   title="Hide this entry with Caesar cipher"
+                   onclick="console.log('[lore-spoilers] INLINE ONCLICK FIRED'); window.loreSpoilersCipherEntry('${textareaGlobalId}');" />
         `;
         
         const button = cipherBtn.querySelector('input');
@@ -380,28 +387,7 @@ function injectCipherButtons() {
             console.log(`[${extensionName}] Entry ${idx} textarea has no parent`);
         }
         
-        // Attach click handler - try multiple methods
-        console.log(`[${extensionName}] Attaching click handler to button for entry ${idx}`);
-        
-        const clickHandler = (e) => {
-            console.log(`[${extensionName}] *** BUTTON CLICKED *** for entry ${idx}`);
-            e.preventDefault();
-            e.stopPropagation();
-            onCipherEntryClick(textarea);
-        };
-        
-        // Method 1: addEventListener for click
-        button.addEventListener('click', clickHandler);
-        
-        // Method 2: addEventListener for mousedown (backup)
-        button.addEventListener('mousedown', (e) => {
-            console.log(`[${extensionName}] *** BUTTON MOUSEDOWN *** for entry ${idx}`);
-        });
-        
-        // Method 3: Direct onclick property (last resort)
-        button.onclick = clickHandler;
-        
-        console.log(`[${extensionName}] Click handler attached for entry ${idx}`);
+        console.log(`[${extensionName}] Button with inline onclick created for entry ${idx}`);
     });
     
     console.log(`[${extensionName}] Button injection complete`);
