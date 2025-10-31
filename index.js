@@ -119,6 +119,127 @@ function onRevealEntryClick(textarea) {
     return true;
 }
 
+// Handle clicking "Cipher Entire Lorebook" button
+function onCipherAllClick() {
+    if (!extension_settings[extensionName].enabled) {
+        toastr.warning("Extension is disabled", "Lore Spoilers");
+        return;
+    }
+    
+    // Find all World Info entries
+    const entries = document.querySelectorAll('.world_entry');
+    
+    if (entries.length === 0) {
+        toastr.warning("No World Info entries found. Open the World Info panel first.", "Lore Spoilers");
+        return;
+    }
+    
+    let cipheredCount = 0;
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    
+    entries.forEach((entry) => {
+        // Find the content textarea
+        let textarea = entry.querySelector('textarea[name="content"]');
+        if (!textarea) {
+            textarea = entry.querySelector('textarea[name="comment"]') ||
+                      entry.querySelector('textarea[name="world_info_entry_content"]') ||
+                      entry.querySelector('textarea');
+        }
+        
+        if (!textarea) return;
+        
+        const currentValue = textarea.value;
+        
+        // Skip if empty or doesn't have spoiler tag
+        if (!currentValue || !currentValue.trim() || !currentValue.startsWith(spoilerTag)) {
+            return;
+        }
+        
+        // Cipher this entry
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+        textarea.setAttribute('data-lore-spoiler-id', textareaId);
+        
+        const ciphered = processSpoilerText(currentValue);
+        
+        displayCipheredTextareas.set(textareaId, {
+            plaintext: currentValue,
+            ciphered: ciphered,
+            isRevealed: false
+        });
+        
+        textarea.value = ciphered;
+        
+        // Toggle per-entry buttons if they exist
+        const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
+        if (buttonContainer) {
+            const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+            const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+            if (cipherBtn && revealBtn) {
+                cipherBtn.style.display = 'none';
+                revealBtn.style.display = 'inline-block';
+            }
+        }
+        
+        cipheredCount++;
+    });
+    
+    if (cipheredCount > 0) {
+        toastr.success(`Ciphered ${cipheredCount} spoiler ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+        
+        // Toggle global buttons
+        $("#lore_spoilers_cipher_all_button").hide();
+        $("#lore_spoilers_reveal_all_button").show();
+    } else {
+        toastr.info("No spoiler entries found. Make sure entries start with: " + spoilerTag, "Lore Spoilers");
+    }
+}
+
+// Handle clicking "Reveal Entire Lorebook" button
+function onRevealAllClick() {
+    if (!extension_settings[extensionName].enabled) {
+        toastr.warning("Extension is disabled", "Lore Spoilers");
+        return;
+    }
+    
+    let revealedCount = 0;
+    
+    // Find all entries with ciphered data
+    displayCipheredTextareas.forEach((data, textareaId) => {
+        const textarea = document.querySelector(`textarea[data-lore-spoiler-id="${textareaId}"]`);
+        
+        if (textarea && !data.isRevealed) {
+            textarea.value = data.plaintext;
+            data.isRevealed = true;
+            
+            // Toggle per-entry buttons if they exist
+            const entry = textarea.closest('.world_entry');
+            if (entry) {
+                const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
+                if (buttonContainer) {
+                    const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+                    const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+                    if (cipherBtn && revealBtn) {
+                        cipherBtn.style.display = 'inline-block';
+                        revealBtn.style.display = 'none';
+                    }
+                }
+            }
+            
+            revealedCount++;
+        }
+    });
+    
+    if (revealedCount > 0) {
+        toastr.success(`Revealed ${revealedCount} spoiler ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+        
+        // Toggle global buttons
+        $("#lore_spoilers_cipher_all_button").show();
+        $("#lore_spoilers_reveal_all_button").hide();
+    } else {
+        toastr.info("No ciphered entries found to reveal", "Lore Spoilers");
+    }
+}
+
 // Store original (plaintext) values for World Info entries - FOR DISPLAY ONLY
 // The actual World Info database always keeps plaintext
 const displayCipheredTextareas = new Map();
@@ -632,6 +753,10 @@ jQuery(async () => {
         // Bind text input events
         $("#lore_spoilers_tag").on("input", onSpoilerTagChange);
         $("#lore_spoilers_shift").on("input", onCipherShiftChange);
+        
+        // Bind cipher/reveal all buttons
+        $("#lore_spoilers_cipher_all_button").on("click", onCipherAllClick);
+        $("#lore_spoilers_reveal_all_button").on("click", onRevealAllClick);
        
         // Load saved settings
         loadSettings();
