@@ -179,11 +179,13 @@ function onCipherAllClick() {
         const currentValue = textarea.value;
         console.log(`[lore-spoilers] Processing textarea ${idx}: length=${currentValue.length}`);
         
-        // Cipher ALL entries
+        // Cipher ALL entries (bypass tag check for lorebook-wide cipher)
         const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${idx}`;
         textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
-        const ciphered = processSpoilerText(currentValue);
+        // Cipher the entire text without requiring spoiler tag
+        const shift = extension_settings[extensionName].cipherShift;
+        const ciphered = caesarCipher(currentValue, shift);
         console.log(`[lore-spoilers] Ciphered textarea ${idx}, original length=${currentValue.length}, ciphered length=${ciphered.length}`);
         
         displayCipheredTextareas.set(textareaId, {
