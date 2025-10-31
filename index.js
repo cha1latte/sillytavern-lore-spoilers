@@ -351,7 +351,14 @@ function injectCipherButtons() {
         }
         
         // Attach click handler
-        button.addEventListener('click', () => onCipherEntryClick(textarea));
+        console.log(`[${extensionName}] Attaching click handler to button for entry ${idx}`);
+        button.addEventListener('click', (e) => {
+            console.log(`[${extensionName}] Button click event fired for entry ${idx}`);
+            e.preventDefault();
+            e.stopPropagation();
+            onCipherEntryClick(textarea);
+        });
+        console.log(`[${extensionName}] Click handler attached for entry ${idx}`);
     });
     
     console.log(`[${extensionName}] Button injection complete`);
@@ -359,30 +366,42 @@ function injectCipherButtons() {
 
 // Handle clicking cipher button on individual entry
 function onCipherEntryClick(textarea) {
+    console.log(`[${extensionName}] Cipher button clicked`);
+    console.log(`[${extensionName}] Extension enabled:`, extension_settings[extensionName].enabled);
+    
     if (!extension_settings[extensionName].enabled) {
+        toastr.warning("Extension is disabled", "Lore Spoilers");
         return;
     }
     
     const currentValue = textarea.value;
+    console.log(`[${extensionName}] Textarea value:`, currentValue.substring(0, 50));
+    
     const spoilerTag = extension_settings[extensionName].spoilerTag;
+    console.log(`[${extensionName}] Spoiler tag:`, spoilerTag);
     
     // Check if empty
     if (!currentValue || currentValue.trim().length === 0) {
+        console.log(`[${extensionName}] Entry is empty`);
         toastr.warning("Entry is empty", "Lore Spoilers");
         return;
     }
     
     // Check if starts with spoiler tag
     if (!currentValue.startsWith(spoilerTag)) {
+        console.log(`[${extensionName}] Entry does not start with spoiler tag`);
         toastr.info(`Entry must start with ${spoilerTag}`, "Lore Spoilers");
         return;
     }
+    
+    console.log(`[${extensionName}] Ciphering entry...`);
     
     // Cipher this entry
     const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
     textarea.setAttribute('data-lore-spoiler-id', textareaId);
     
     const ciphered = processSpoilerText(currentValue);
+    console.log(`[${extensionName}] Ciphered text:`, ciphered.substring(0, 50));
     
     displayCipheredTextareas.set(textareaId, {
         plaintext: currentValue,
@@ -393,6 +412,7 @@ function onCipherEntryClick(textarea) {
     // Update display
     textarea.value = ciphered;
     
+    console.log(`[${extensionName}] Entry ciphered successfully`);
     toastr.success("Entry ciphered", "Lore Spoilers");
 }
 
