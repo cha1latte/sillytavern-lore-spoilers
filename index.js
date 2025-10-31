@@ -544,14 +544,36 @@ function onWorldInfoBlur(event) {
 window.loreSpoilersCipherEntry = function(buttonElement) {
     console.log(`[lore-spoilers] Global cipher function called, button element:`, buttonElement);
     
-    // Get the textarea reference from the button's data attribute
-    const textareaRefId = buttonElement.getAttribute('data-textarea-ref');
-    console.log(`[lore-spoilers] Textarea ref ID:`, textareaRefId);
+    // Find the textarea FRESH - walk up to find the .world_entry container
+    let container = buttonElement;
+    for (let i = 0; i < 10; i++) {
+        container = container.parentElement;
+        if (!container) break;
+        
+        if (container.classList.contains('world_entry')) {
+            console.log(`[lore-spoilers] Found world_entry container at level ${i}`);
+            break;
+        }
+    }
     
-    const textarea = window[textareaRefId];
+    if (!container) {
+        console.error(`[lore-spoilers] Could not find world_entry container`);
+        toastr.error("Could not find entry container", "Lore Spoilers");
+        return;
+    }
+    
+    // Now find the content textarea specifically
+    let textarea = container.querySelector('textarea[name="content"]');
     
     if (!textarea) {
-        console.error(`[lore-spoilers] Could not find textarea with ref:`, textareaRefId);
+        console.log(`[lore-spoilers] No textarea[name="content"], trying other selectors...`);
+        textarea = container.querySelector('textarea[name="comment"]') ||
+                  container.querySelector('textarea[name="world_info_entry_content"]') ||
+                  container.querySelector('textarea');
+    }
+    
+    if (!textarea) {
+        console.error(`[lore-spoilers] Could not find any textarea in container`);
         toastr.error("Could not find entry textarea", "Lore Spoilers");
         return;
     }
