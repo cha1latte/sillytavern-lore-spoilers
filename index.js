@@ -135,7 +135,6 @@ function onCipherAllClick() {
     }
     
     let cipheredCount = 0;
-    const spoilerTag = extension_settings[extensionName].spoilerTag;
     
     entries.forEach((entry) => {
         // Find the content textarea
@@ -150,12 +149,12 @@ function onCipherAllClick() {
         
         const currentValue = textarea.value;
         
-        // Skip if empty or doesn't have spoiler tag
-        if (!currentValue || !currentValue.trim() || !currentValue.startsWith(spoilerTag)) {
+        // Skip if empty
+        if (!currentValue || !currentValue.trim()) {
             return;
         }
         
-        // Cipher this entry
+        // Cipher ALL entries (no spoiler tag required for global button)
         const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
         textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
@@ -184,13 +183,13 @@ function onCipherAllClick() {
     });
     
     if (cipheredCount > 0) {
-        toastr.success(`Ciphered ${cipheredCount} spoiler ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+        toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
         
         // Toggle global buttons
         $("#lore_spoilers_cipher_all_button").hide();
         $("#lore_spoilers_reveal_all_button").show();
     } else {
-        toastr.info("No spoiler entries found. Make sure entries start with: " + spoilerTag, "Lore Spoilers");
+        toastr.info("No entries found to cipher", "Lore Spoilers");
     }
 }
 
