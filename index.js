@@ -97,8 +97,6 @@ function decipherSpoilerText(text) {
 
 // Handle clicking reveal button on individual entry
 function onRevealEntryClick(textarea) {
-    console.log(`[${extensionName}] Reveal button clicked`);
-    
     if (!extension_settings[extensionName].enabled) {
         toastr.warning("Extension is disabled", "Lore Spoilers");
         return false;
@@ -107,7 +105,6 @@ function onRevealEntryClick(textarea) {
     const textareaId = textarea.getAttribute('data-lore-spoiler-id');
     
     if (!textareaId || !displayCipheredTextareas.has(textareaId)) {
-        console.log(`[${extensionName}] No ciphered data found for this textarea`);
         toastr.info("Entry is not ciphered", "Lore Spoilers");
         return false;
     }
@@ -118,14 +115,8 @@ function onRevealEntryClick(textarea) {
     textarea.value = data.plaintext;
     data.isRevealed = true;
     
-    console.log(`[${extensionName}] Entry revealed successfully`);
     toastr.success("Entry revealed", "Lore Spoilers");
     return true;
-}
-
-// Manual hide button handler
-function onHideSpoilersClick() {
-    cipherAllVisibleEntries();
 }
 
 // Store original (plaintext) values for World Info entries - FOR DISPLAY ONLY
@@ -283,11 +274,8 @@ function cipherAllVisibleEntries() {
 
 // Monitor for World Info panel changes and new entries
 function setupWorldInfoMonitoring() {
-    console.log(`[${extensionName}] Setting up World Info monitoring...`);
-    
     // Use MutationObserver to watch for new World Info entries
     const observer = new MutationObserver((mutations) => {
-        console.log(`[${extensionName}] MutationObserver detected ${mutations.length} mutations`);
         processWorldInfoEntries();
         attachWorldInfoListeners();
         attachSaveButtonListeners();
@@ -303,7 +291,6 @@ function setupWorldInfoMonitoring() {
         'body'  // Last resort - observe everything
     ];
     
-    let observerAttached = false;
     for (const selector of containers) {
         const container = document.querySelector(selector);
         if (container) {
@@ -313,14 +300,8 @@ function setupWorldInfoMonitoring() {
                 attributes: true,
                 attributeFilter: ['style', 'class']
             });
-            console.log(`[${extensionName}] Monitoring container: ${selector}`);
-            observerAttached = true;
             break;
         }
-    }
-    
-    if (!observerAttached) {
-        console.log(`[${extensionName}] WARNING: Could not find container to observe`);
     }
     
     // Initial processing
@@ -333,18 +314,13 @@ function setupWorldInfoMonitoring() {
     setInterval(() => {
         injectCipherButtons();
     }, 2000);
-    
-    console.log(`[${extensionName}] World Info monitoring setup complete`);
 }
 
 // Inject cipher buttons into World Info entries
 function injectCipherButtons() {
     if (!extension_settings[extensionName].enabled) {
-        console.log(`[${extensionName}] Extension disabled, skipping button injection`);
         return;
     }
-    
-    console.log(`[${extensionName}] Injecting cipher buttons...`);
     
     // Try multiple selectors to find World Info entries
     const selectors = [
@@ -358,23 +334,18 @@ function injectCipherButtons() {
     for (const selector of selectors) {
         const found = document.querySelectorAll(selector);
         if (found.length > 0) {
-            console.log(`[${extensionName}] Found ${found.length} entries with selector: ${selector}`);
             entries = Array.from(found);
             break;
         }
     }
     
     if (entries.length === 0) {
-        console.log(`[${extensionName}] No World Info entries found`);
         return;
     }
-    
-    console.log(`[${extensionName}] Processing ${entries.length} entries`);
     
     entries.forEach((entry, idx) => {
         // Check if we already added the button
         if (entry.querySelector('.lore-spoiler-cipher-btn')) {
-            console.log(`[${extensionName}] Entry ${idx} already has button`);
             return;
         }
         
@@ -391,11 +362,8 @@ function injectCipherButtons() {
         }
         
         if (!textarea) {
-            console.log(`[${extensionName}] Entry ${idx} has no textarea at all`);
             return;
         }
-        
-        console.log(`[${extensionName}] Adding button to entry ${idx}, textarea name: ${textarea.name || 'no name'}`);
         
         // Store textarea reference directly on button for easy access
         const textareaRefId = `lore_spoiler_ref_${Date.now()}_${idx}`;
@@ -408,73 +376,54 @@ function injectCipherButtons() {
                    value="🔒 Cipher This Entry" 
                    title="Hide this entry with Caesar cipher"
                    data-textarea-ref="${textareaRefId}"
-                   onclick="console.log('[lore-spoilers] CIPHER CLICKED'); window.loreSpoilersCipherEntry(this);" />
+                   onclick="window.loreSpoilersCipherEntry(this);" />
             <input type="button" class="menu_button menu_button_icon lore-reveal-btn" 
                    value="👁️ Reveal This Entry" 
                    title="Show the original plaintext"
                    data-textarea-ref="${textareaRefId}"
                    style="display: none;"
-                   onclick="console.log('[lore-spoilers] REVEAL CLICKED'); window.loreSpoilersRevealEntry(this);" />
+                   onclick="window.loreSpoilersRevealEntry(this);" />
         `;
         
         const button = cipherBtn.querySelector('.lore-cipher-btn');
         
         // Store the textarea reference globally
         window[textareaRefId] = textarea;
-        console.log(`[${extensionName}] Stored textarea reference as:`, textareaRefId);
         
         // Insert button after textarea
         if (textarea.parentElement) {
             textarea.parentElement.appendChild(cipherBtn);
-            console.log(`[${extensionName}] Button added to entry ${idx}`);
-        } else {
-            console.log(`[${extensionName}] Entry ${idx} textarea has no parent`);
         }
-        
-        console.log(`[${extensionName}] Button with inline onclick created for entry ${idx}`);
     });
-    
-    console.log(`[${extensionName}] Button injection complete`);
 }
 
 // Handle clicking cipher button on individual entry
 function onCipherEntryClick(textarea) {
-    console.log(`[${extensionName}] Cipher button clicked`);
-    console.log(`[${extensionName}] Extension enabled:`, extension_settings[extensionName].enabled);
-    
     if (!extension_settings[extensionName].enabled) {
         toastr.warning("Extension is disabled", "Lore Spoilers");
         return false;
     }
     
     const currentValue = textarea.value;
-    console.log(`[${extensionName}] Textarea value:`, currentValue.substring(0, 50));
-    
     const spoilerTag = extension_settings[extensionName].spoilerTag;
-    console.log(`[${extensionName}] Spoiler tag:`, spoilerTag);
     
     // Check if empty
     if (!currentValue || currentValue.trim().length === 0) {
-        console.log(`[${extensionName}] Entry is empty`);
         toastr.warning("Entry is empty", "Lore Spoilers");
         return false;
     }
     
     // Check if starts with spoiler tag
     if (!currentValue.startsWith(spoilerTag)) {
-        console.log(`[${extensionName}] Entry does not start with spoiler tag`);
         toastr.info(`Entry must start with ${spoilerTag}`, "Lore Spoilers");
         return false;
     }
-    
-    console.log(`[${extensionName}] Ciphering entry...`);
     
     // Cipher this entry
     const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
     textarea.setAttribute('data-lore-spoiler-id', textareaId);
     
     const ciphered = processSpoilerText(currentValue);
-    console.log(`[${extensionName}] Ciphered text:`, ciphered.substring(0, 50));
     
     displayCipheredTextareas.set(textareaId, {
         plaintext: currentValue,
@@ -485,7 +434,6 @@ function onCipherEntryClick(textarea) {
     // Update display
     textarea.value = ciphered;
     
-    console.log(`[${extensionName}] Entry ciphered successfully`);
     toastr.success("Entry ciphered", "Lore Spoilers");
     return true;
 }
@@ -577,46 +525,35 @@ function onWorldInfoBlur(event) {
 
 // Global function for inline onclick - defined here so onCipherEntryClick is already defined
 window.loreSpoilersCipherEntry = function(buttonElement) {
-    console.log(`[lore-spoilers] Global cipher function called, button element:`, buttonElement);
-    
-    // Find the textarea FRESH - walk up to find the .world_entry container
+    // Find the textarea - walk up to find the .world_entry container
     let container = buttonElement;
     for (let i = 0; i < 10; i++) {
         container = container.parentElement;
         if (!container) break;
         
         if (container.classList.contains('world_entry')) {
-            console.log(`[lore-spoilers] Found world_entry container at level ${i}`);
             break;
         }
     }
     
     if (!container) {
-        console.error(`[lore-spoilers] Could not find world_entry container`);
         toastr.error("Could not find entry container", "Lore Spoilers");
         return;
     }
     
-    // Now find the content textarea specifically
+    // Find the content textarea
     let textarea = container.querySelector('textarea[name="content"]');
     
     if (!textarea) {
-        console.log(`[lore-spoilers] No textarea[name="content"], trying other selectors...`);
         textarea = container.querySelector('textarea[name="comment"]') ||
                   container.querySelector('textarea[name="world_info_entry_content"]') ||
                   container.querySelector('textarea');
     }
     
     if (!textarea) {
-        console.error(`[lore-spoilers] Could not find any textarea in container`);
         toastr.error("Could not find entry textarea", "Lore Spoilers");
         return;
     }
-    
-    console.log(`[lore-spoilers] Found textarea, name:`, textarea.name);
-    console.log(`[lore-spoilers] Textarea value length:`, textarea.value.length);
-    console.log(`[lore-spoilers] First 100 chars:`, textarea.value.substring(0, 100));
-    console.log(`[lore-spoilers] Calling onCipherEntryClick`);
     
     const result = onCipherEntryClick(textarea);
     
@@ -635,27 +572,23 @@ window.loreSpoilersCipherEntry = function(buttonElement) {
 
 // Global function for revealing entries
 window.loreSpoilersRevealEntry = function(buttonElement) {
-    console.log(`[lore-spoilers] Global reveal function called`);
-    
-    // Find the textarea FRESH - walk up to find the .world_entry container
+    // Find the textarea - walk up to find the .world_entry container
     let container = buttonElement;
     for (let i = 0; i < 10; i++) {
         container = container.parentElement;
         if (!container) break;
         
         if (container.classList.contains('world_entry')) {
-            console.log(`[lore-spoilers] Found world_entry container at level ${i}`);
             break;
         }
     }
     
     if (!container) {
-        console.error(`[lore-spoilers] Could not find world_entry container`);
         toastr.error("Could not find entry container", "Lore Spoilers");
         return;
     }
     
-    // Now find the content textarea specifically
+    // Find the content textarea
     let textarea = container.querySelector('textarea[name="content"]');
     
     if (!textarea) {
@@ -665,12 +598,9 @@ window.loreSpoilersRevealEntry = function(buttonElement) {
     }
     
     if (!textarea) {
-        console.error(`[lore-spoilers] Could not find any textarea in container`);
         toastr.error("Could not find entry textarea", "Lore Spoilers");
         return;
     }
-    
-    console.log(`[lore-spoilers] Found textarea for reveal`);
     
     const result = onRevealEntryClick(textarea);
     
@@ -689,8 +619,6 @@ window.loreSpoilersRevealEntry = function(buttonElement) {
 
 // Extension initialization
 jQuery(async () => {
-    console.log(`[lore-spoilers] Global cipher function type:`, typeof window.loreSpoilersCipherEntry);
-    
     try {
         // Load HTML from file
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
@@ -704,9 +632,6 @@ jQuery(async () => {
         // Bind text input events
         $("#lore_spoilers_tag").on("input", onSpoilerTagChange);
         $("#lore_spoilers_shift").on("input", onCipherShiftChange);
-        
-        // Bind hide spoilers button
-        $("#lore_spoilers_hide_button").on("click", onHideSpoilersClick);
        
         // Load saved settings
         loadSettings();
