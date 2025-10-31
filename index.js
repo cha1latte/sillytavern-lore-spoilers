@@ -126,27 +126,17 @@ function onCipherAllClick() {
         return;
     }
     
-    // Find all World Info entries
-    const entries = document.querySelectorAll('.world_entry');
+    // Find ALL content textareas in the World Info panel (not just open entries)
+    const textareas = document.querySelectorAll('textarea[name="content"]');
     
-    if (entries.length === 0) {
+    if (textareas.length === 0) {
         toastr.warning("No World Info entries found. Open the World Info panel first.", "Lore Spoilers");
         return;
     }
     
     let cipheredCount = 0;
     
-    entries.forEach((entry) => {
-        // Find the content textarea
-        let textarea = entry.querySelector('textarea[name="content"]');
-        if (!textarea) {
-            textarea = entry.querySelector('textarea[name="comment"]') ||
-                      entry.querySelector('textarea[name="world_info_entry_content"]') ||
-                      entry.querySelector('textarea');
-        }
-        
-        if (!textarea) return;
-        
+    textareas.forEach((textarea) => {
         const currentValue = textarea.value;
         
         // Skip if empty
@@ -168,14 +158,17 @@ function onCipherAllClick() {
         
         textarea.value = ciphered;
         
-        // Toggle per-entry buttons if they exist
-        const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
-        if (buttonContainer) {
-            const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
-            const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
-            if (cipherBtn && revealBtn) {
-                cipherBtn.style.display = 'none';
-                revealBtn.style.display = 'inline-block';
+        // Toggle per-entry buttons if they exist (for open entries)
+        const entry = textarea.closest('.world_entry');
+        if (entry) {
+            const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
+            if (buttonContainer) {
+                const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+                const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+                if (cipherBtn && revealBtn) {
+                    cipherBtn.style.display = 'none';
+                    revealBtn.style.display = 'inline-block';
+                }
             }
         }
         
