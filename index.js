@@ -530,8 +530,22 @@ function onWorldInfoBlur(event) {
     }
 }
 
+// Global function for inline onclick - defined here so onCipherEntryClick is already defined
+window.loreSpoilersCipherEntry = function(textareaGlobalId) {
+    console.log(`[lore-spoilers] Global cipher function called for:`, textareaGlobalId);
+    const textarea = window[textareaGlobalId];
+    if (textarea) {
+        console.log(`[lore-spoilers] Found textarea, calling onCipherEntryClick`);
+        onCipherEntryClick(textarea);
+    } else {
+        console.error(`[lore-spoilers] Could not find textarea with id:`, textareaGlobalId);
+    }
+};
+
 // Extension initialization
 jQuery(async () => {
+    console.log(`[lore-spoilers] Global cipher function type:`, typeof window.loreSpoilersCipherEntry);
+    
     try {
         // Load HTML from file
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
