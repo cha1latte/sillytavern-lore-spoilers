@@ -36,8 +36,15 @@
                     <li>Start the content with your spoiler tag (e.g., <code>[SPOILER]Secret text here</code>)</li>
                     <li>Click the "🔒 Cipher This Entry" button below the content to hide it</li>
                     <li>Click the "👁️ Reveal This Entry" button to show it again</li>
+                    <li>Or use the buttons below to cipher/reveal ALL spoiler entries at once</li>
                 </ol>
                 <p><strong>Important:</strong> The LLM always receives the unciphered plaintext automatically!</p>
+                
+                <div style="margin-top: 15px;">
+                    <input id="lore_spoilers_cipher_all_button" class="menu_button" type="button" value="🔒 Cipher Entire Lorebook" />
+                    <input id="lore_spoilers_reveal_all_button" class="menu_button" type="button" value="👁️ Reveal Entire Lorebook" style="display: none;" />
+                    <p><small>Cipher or reveal all entries that start with your spoiler tag.</small></p>
+                </div>
             </div>
         </div>
     </div>
