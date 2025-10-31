@@ -9,3 +9,8 @@
 .lore-spoiler-cipher-btn input {
     font-size: 14px;
 }
+
+/* Space between cipher and reveal buttons */
+.lore-spoiler-cipher-btn .lore-reveal-btn {
+    margin-left: 5px;
+}
