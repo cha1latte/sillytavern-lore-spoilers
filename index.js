@@ -140,20 +140,41 @@ function onCipherAllClick() {
         return;
     }
     
-    // Find ALL content textareas within the World Info container
-    const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
-    console.log(`[lore-spoilers] Found ${textareas.length} textareas in World Info`);
+    // CRITICAL FIX: Find all VISIBLE world_entry containers (not the template!)
+    // The template (#entry_edit_template) should be excluded
+    const visibleEntries = worldInfoContainer.querySelectorAll('.world_entry:not(#entry_edit_template)');
+    console.log(`[lore-spoilers] Found ${visibleEntries.length} visible world_entry containers`);
     
-    if (textareas.length === 0) {
+    if (visibleEntries.length === 0) {
         toastr.warning("No World Info entries found. Open some entries in the lorebook.", "Lore Spoilers");
         return;
     }
     
     let cipheredCount = 0;
+    const textareas = [];
     
+    // Collect all content textareas from visible entries
+    visibleEntries.forEach((entry, entryIdx) => {
+        const textarea = entry.querySelector('textarea[name="content"]');
+        if (textarea) {
+            textareas.push(textarea);
+            console.log(`[lore-spoilers] Entry ${entryIdx}: Found textarea with length=${textarea.value.length}`);
+        } else {
+            console.log(`[lore-spoilers] Entry ${entryIdx}: No textarea found`);
+        }
+    });
+    
+    console.log(`[lore-spoilers] Total textareas collected: ${textareas.length}`);
+    
+    if (textareas.length === 0) {
+        toastr.warning("No textareas found in visible entries.", "Lore Spoilers");
+        return;
+    }
+    
+    // Now process each textarea
     textareas.forEach((textarea, idx) => {
         const currentValue = textarea.value;
-        console.log(`[lore-spoilers] Textarea ${idx}: id="${textarea.id}", length=${currentValue.length}`);
+        console.log(`[lore-spoilers] Processing textarea ${idx}: length=${currentValue.length}`);
         
         // Skip if empty
         if (!currentValue || !currentValue.trim()) {
@@ -161,10 +182,8 @@ function onCipherAllClick() {
             return;
         }
         
-        console.log(`[lore-spoilers] Processing textarea ${idx}...`);
-        
         // Cipher ALL entries (no spoiler tag required for global button)
-        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${idx}`;
         textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
         const ciphered = processSpoilerText(currentValue);
