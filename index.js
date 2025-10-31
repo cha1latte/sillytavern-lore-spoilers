@@ -184,10 +184,6 @@ function onCipherAllClick() {
     
     if (cipheredCount > 0) {
         toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
-        
-        // Toggle global buttons
-        $("#lore_spoilers_cipher_all_button").hide();
-        $("#lore_spoilers_reveal_all_button").show();
     } else {
         toastr.info("No entries found to cipher", "Lore Spoilers");
     }
@@ -230,10 +226,6 @@ function onRevealAllClick() {
     
     if (revealedCount > 0) {
         toastr.success(`Revealed ${revealedCount} spoiler ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
-        
-        // Toggle global buttons
-        $("#lore_spoilers_cipher_all_button").show();
-        $("#lore_spoilers_reveal_all_button").hide();
     } else {
         toastr.info("No ciphered entries found to reveal", "Lore Spoilers");
     }
@@ -400,6 +392,7 @@ function setupWorldInfoMonitoring() {
         attachWorldInfoListeners();
         attachSaveButtonListeners();
         injectCipherButtons();
+        injectLorebookButtons();
     });
     
     // Try multiple containers
@@ -429,11 +422,82 @@ function setupWorldInfoMonitoring() {
     attachWorldInfoListeners();
     attachSaveButtonListeners();
     injectCipherButtons();
+    injectLorebookButtons();
     
     // Also poll every 2 seconds as backup
     setInterval(() => {
         injectCipherButtons();
+        injectLorebookButtons();
     }, 2000);
+}
+
+// Inject cipher/reveal all buttons into lorebook UI
+function injectLorebookButtons() {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    // Try to find the lorebook header/controls area
+    const selectors = [
+        '#world_popup_new_entry',
+        '#world_popup_entries_list',
+        '.world_popup',
+        '#world_info'
+    ];
+    
+    let lorebookContainer = null;
+    for (const selector of selectors) {
+        lorebookContainer = document.querySelector(selector);
+        if (lorebookContainer) break;
+    }
+    
+    if (!lorebookContainer) {
+        return;
+    }
+    
+    // Check if we already added buttons
+    if (lorebookContainer.querySelector('.lore-spoiler-lorebook-btns')) {
+        return;
+    }
+    
+    // Create button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'lore-spoiler-lorebook-btns';
+    buttonContainer.style.cssText = 'margin: 10px 0; padding: 10px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 5px;';
+    buttonContainer.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="button" class="menu_button menu_button_icon lore-cipher-lorebook-btn" 
+                   value="🔒 Cipher This Lorebook" 
+                   title="Hide all entries in this lorebook" />
+            <input type="button" class="menu_button menu_button_icon lore-reveal-lorebook-btn" 
+                   value="👁️ Reveal This Lorebook" 
+                   title="Show all entries in this lorebook"
+                   style="display: none;" />
+        </div>
+    `;
+    
+    // Insert at the top of the lorebook
+    if (lorebookContainer.firstChild) {
+        lorebookContainer.insertBefore(buttonContainer, lorebookContainer.firstChild);
+    } else {
+        lorebookContainer.appendChild(buttonContainer);
+    }
+    
+    // Attach click handlers
+    const cipherBtn = buttonContainer.querySelector('.lore-cipher-lorebook-btn');
+    const revealBtn = buttonContainer.querySelector('.lore-reveal-lorebook-btn');
+    
+    cipherBtn.addEventListener('click', () => {
+        onCipherAllClick();
+        cipherBtn.style.display = 'none';
+        revealBtn.style.display = 'inline-block';
+    });
+    
+    revealBtn.addEventListener('click', () => {
+        onRevealAllClick();
+        cipherBtn.style.display = 'inline-block';
+        revealBtn.style.display = 'none';
+    });
 }
 
 // Inject cipher buttons into World Info entries
@@ -752,10 +816,6 @@ jQuery(async () => {
         // Bind text input events
         $("#lore_spoilers_tag").on("input", onSpoilerTagChange);
         $("#lore_spoilers_shift").on("input", onCipherShiftChange);
-        
-        // Bind cipher/reveal all buttons
-        $("#lore_spoilers_cipher_all_button").on("click", onCipherAllClick);
-        $("#lore_spoilers_reveal_all_button").on("click", onRevealAllClick);
        
         // Load saved settings
         loadSettings();
