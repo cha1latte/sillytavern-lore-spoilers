@@ -121,6 +121,8 @@ function onRevealEntryClick(textarea) {
 
 // Handle clicking "Cipher Entire Lorebook" button
 function onCipherAllClick() {
+    console.log('[lore-spoilers] onCipherAllClick called');
+    
     if (!extension_settings[extensionName].enabled) {
         toastr.warning("Extension is disabled", "Lore Spoilers");
         return;
@@ -128,6 +130,7 @@ function onCipherAllClick() {
     
     // Find ALL content textareas in the World Info panel (not just open entries)
     const textareas = document.querySelectorAll('textarea[name="content"]');
+    console.log(`[lore-spoilers] Found ${textareas.length} textareas`);
     
     if (textareas.length === 0) {
         toastr.warning("No World Info entries found. Open the World Info panel first.", "Lore Spoilers");
@@ -136,19 +139,24 @@ function onCipherAllClick() {
     
     let cipheredCount = 0;
     
-    textareas.forEach((textarea) => {
+    textareas.forEach((textarea, idx) => {
         const currentValue = textarea.value;
+        console.log(`[lore-spoilers] Textarea ${idx}: id="${textarea.id}", length=${currentValue.length}`);
         
         // Skip if empty
         if (!currentValue || !currentValue.trim()) {
+            console.log(`[lore-spoilers] Textarea ${idx} is empty, skipping`);
             return;
         }
+        
+        console.log(`[lore-spoilers] Processing textarea ${idx}...`);
         
         // Cipher ALL entries (no spoiler tag required for global button)
         const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
         textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
         const ciphered = processSpoilerText(currentValue);
+        console.log(`[lore-spoilers] Ciphered textarea ${idx}, original length=${currentValue.length}, ciphered length=${ciphered.length}`);
         
         displayCipheredTextareas.set(textareaId, {
             plaintext: currentValue,
@@ -157,6 +165,7 @@ function onCipherAllClick() {
         });
         
         textarea.value = ciphered;
+        console.log(`[lore-spoilers] Set textarea ${idx} value to ciphered text`);
         
         // Toggle per-entry buttons if they exist (for open entries)
         const entry = textarea.closest('.world_entry');
@@ -174,6 +183,8 @@ function onCipherAllClick() {
         
         cipheredCount++;
     });
+    
+    console.log(`[lore-spoilers] Ciphered ${cipheredCount} entries total`);
     
     if (cipheredCount > 0) {
         toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
