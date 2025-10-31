@@ -95,6 +95,34 @@ function decipherSpoilerText(text) {
     return text;
 }
 
+// Handle clicking reveal button on individual entry
+function onRevealEntryClick(textarea) {
+    console.log(`[${extensionName}] Reveal button clicked`);
+    
+    if (!extension_settings[extensionName].enabled) {
+        toastr.warning("Extension is disabled", "Lore Spoilers");
+        return false;
+    }
+    
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id');
+    
+    if (!textareaId || !displayCipheredTextareas.has(textareaId)) {
+        console.log(`[${extensionName}] No ciphered data found for this textarea`);
+        toastr.info("Entry is not ciphered", "Lore Spoilers");
+        return false;
+    }
+    
+    const data = displayCipheredTextareas.get(textareaId);
+    
+    // Restore plaintext
+    textarea.value = data.plaintext;
+    data.isRevealed = true;
+    
+    console.log(`[${extensionName}] Entry revealed successfully`);
+    toastr.success("Entry revealed", "Lore Spoilers");
+    return true;
+}
+
 // Manual hide button handler
 function onHideSpoilersClick() {
     cipherAllVisibleEntries();
@@ -372,18 +400,24 @@ function injectCipherButtons() {
         // Store textarea reference directly on button for easy access
         const textareaRefId = `lore_spoiler_ref_${Date.now()}_${idx}`;
         
-        // Create cipher button with inline onclick - pass the ref ID
+        // Create button container with both cipher and reveal buttons
         const cipherBtn = document.createElement('div');
         cipherBtn.className = 'lore-spoiler-cipher-btn';
         cipherBtn.innerHTML = `
-            <input type="button" class="menu_button menu_button_icon" 
+            <input type="button" class="menu_button menu_button_icon lore-cipher-btn" 
                    value="🔒 Cipher This Entry" 
                    title="Hide this entry with Caesar cipher"
                    data-textarea-ref="${textareaRefId}"
-                   onclick="console.log('[lore-spoilers] INLINE ONCLICK FIRED'); window.loreSpoilersCipherEntry(this);" />
+                   onclick="console.log('[lore-spoilers] CIPHER CLICKED'); window.loreSpoilersCipherEntry(this);" />
+            <input type="button" class="menu_button menu_button_icon lore-reveal-btn" 
+                   value="👁️ Reveal This Entry" 
+                   title="Show the original plaintext"
+                   data-textarea-ref="${textareaRefId}"
+                   style="display: none;"
+                   onclick="console.log('[lore-spoilers] REVEAL CLICKED'); window.loreSpoilersRevealEntry(this);" />
         `;
         
-        const button = cipherBtn.querySelector('input');
+        const button = cipherBtn.querySelector('.lore-cipher-btn');
         
         // Store the textarea reference globally
         window[textareaRefId] = textarea;
@@ -410,7 +444,7 @@ function onCipherEntryClick(textarea) {
     
     if (!extension_settings[extensionName].enabled) {
         toastr.warning("Extension is disabled", "Lore Spoilers");
-        return;
+        return false;
     }
     
     const currentValue = textarea.value;
@@ -423,14 +457,14 @@ function onCipherEntryClick(textarea) {
     if (!currentValue || currentValue.trim().length === 0) {
         console.log(`[${extensionName}] Entry is empty`);
         toastr.warning("Entry is empty", "Lore Spoilers");
-        return;
+        return false;
     }
     
     // Check if starts with spoiler tag
     if (!currentValue.startsWith(spoilerTag)) {
         console.log(`[${extensionName}] Entry does not start with spoiler tag`);
         toastr.info(`Entry must start with ${spoilerTag}`, "Lore Spoilers");
-        return;
+        return false;
     }
     
     console.log(`[${extensionName}] Ciphering entry...`);
@@ -453,6 +487,7 @@ function onCipherEntryClick(textarea) {
     
     console.log(`[${extensionName}] Entry ciphered successfully`);
     toastr.success("Entry ciphered", "Lore Spoilers");
+    return true;
 }
 
 // Attach listeners to save/close buttons to restore plaintext before save
@@ -582,7 +617,74 @@ window.loreSpoilersCipherEntry = function(buttonElement) {
     console.log(`[lore-spoilers] Textarea value length:`, textarea.value.length);
     console.log(`[lore-spoilers] First 100 chars:`, textarea.value.substring(0, 100));
     console.log(`[lore-spoilers] Calling onCipherEntryClick`);
-    onCipherEntryClick(textarea);
+    
+    const result = onCipherEntryClick(textarea);
+    
+    // If cipher was successful, toggle button visibility
+    if (result) {
+        const buttonContainer = buttonElement.parentElement;
+        const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+        const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+        
+        if (cipherBtn && revealBtn) {
+            cipherBtn.style.display = 'none';
+            revealBtn.style.display = 'inline-block';
+        }
+    }
+};
+
+// Global function for revealing entries
+window.loreSpoilersRevealEntry = function(buttonElement) {
+    console.log(`[lore-spoilers] Global reveal function called`);
+    
+    // Find the textarea FRESH - walk up to find the .world_entry container
+    let container = buttonElement;
+    for (let i = 0; i < 10; i++) {
+        container = container.parentElement;
+        if (!container) break;
+        
+        if (container.classList.contains('world_entry')) {
+            console.log(`[lore-spoilers] Found world_entry container at level ${i}`);
+            break;
+        }
+    }
+    
+    if (!container) {
+        console.error(`[lore-spoilers] Could not find world_entry container`);
+        toastr.error("Could not find entry container", "Lore Spoilers");
+        return;
+    }
+    
+    // Now find the content textarea specifically
+    let textarea = container.querySelector('textarea[name="content"]');
+    
+    if (!textarea) {
+        textarea = container.querySelector('textarea[name="comment"]') ||
+                  container.querySelector('textarea[name="world_info_entry_content"]') ||
+                  container.querySelector('textarea');
+    }
+    
+    if (!textarea) {
+        console.error(`[lore-spoilers] Could not find any textarea in container`);
+        toastr.error("Could not find entry textarea", "Lore Spoilers");
+        return;
+    }
+    
+    console.log(`[lore-spoilers] Found textarea for reveal`);
+    
+    const result = onRevealEntryClick(textarea);
+    
+    // If reveal was successful, toggle button visibility
+    if (result) {
+        const buttonContainer = buttonElement.parentElement;
+        const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+        const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+        
+        if (cipherBtn && revealBtn) {
+            cipherBtn.style.display = 'inline-block';
+            revealBtn.style.display = 'none';
+        }
+    }
 };
 
 // Extension initialization
