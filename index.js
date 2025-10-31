@@ -252,21 +252,44 @@ function cipherAllVisibleEntries() {
 
 // Monitor for World Info panel changes and new entries
 function setupWorldInfoMonitoring() {
+    console.log(`[${extensionName}] Setting up World Info monitoring...`);
+    
     // Use MutationObserver to watch for new World Info entries
     const observer = new MutationObserver((mutations) => {
+        console.log(`[${extensionName}] MutationObserver detected ${mutations.length} mutations`);
         processWorldInfoEntries();
         attachWorldInfoListeners();
         attachSaveButtonListeners();
         injectCipherButtons();
     });
     
-    // Observe the world info container
-    const worldInfoContainer = document.querySelector('#world_info');
-    if (worldInfoContainer) {
-        observer.observe(worldInfoContainer, {
-            childList: true,
-            subtree: true
-        });
+    // Try multiple containers
+    const containers = [
+        '#world_info',
+        '#worldInfoContainer', 
+        '.world_entries_container',
+        '#world_popup',
+        'body'  // Last resort - observe everything
+    ];
+    
+    let observerAttached = false;
+    for (const selector of containers) {
+        const container = document.querySelector(selector);
+        if (container) {
+            observer.observe(container, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+            console.log(`[${extensionName}] Monitoring container: ${selector}`);
+            observerAttached = true;
+            break;
+        }
+    }
+    
+    if (!observerAttached) {
+        console.log(`[${extensionName}] WARNING: Could not find container to observe`);
     }
     
     // Initial processing
@@ -274,6 +297,13 @@ function setupWorldInfoMonitoring() {
     attachWorldInfoListeners();
     attachSaveButtonListeners();
     injectCipherButtons();
+    
+    // Also poll every 2 seconds as backup
+    setInterval(() => {
+        injectCipherButtons();
+    }, 2000);
+    
+    console.log(`[${extensionName}] World Info monitoring setup complete`);
 }
 
 // Inject cipher buttons into World Info entries
