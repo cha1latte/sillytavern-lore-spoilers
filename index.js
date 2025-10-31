@@ -363,17 +363,25 @@ function injectCipherButtons() {
         
         console.log(`[${extensionName}] Adding button to entry ${idx}, textarea name: ${textarea.name || 'no name'}`);
         
-        // Create cipher button with inline onclick - pass the button element itself
+        // Store textarea reference directly on button for easy access
+        const textareaRefId = `lore_spoiler_ref_${Date.now()}_${idx}`;
+        
+        // Create cipher button with inline onclick - pass the ref ID
         const cipherBtn = document.createElement('div');
         cipherBtn.className = 'lore-spoiler-cipher-btn';
         cipherBtn.innerHTML = `
             <input type="button" class="menu_button menu_button_icon" 
                    value="🔒 Cipher This Entry" 
                    title="Hide this entry with Caesar cipher"
+                   data-textarea-ref="${textareaRefId}"
                    onclick="console.log('[lore-spoilers] INLINE ONCLICK FIRED'); window.loreSpoilersCipherEntry(this);" />
         `;
         
         const button = cipherBtn.querySelector('input');
+        
+        // Store the textarea reference globally
+        window[textareaRefId] = textarea;
+        console.log(`[${extensionName}] Stored textarea reference as:`, textareaRefId);
         
         // Insert button after textarea
         if (textarea.parentElement) {
@@ -530,37 +538,22 @@ function onWorldInfoBlur(event) {
 window.loreSpoilersCipherEntry = function(buttonElement) {
     console.log(`[lore-spoilers] Global cipher function called, button element:`, buttonElement);
     
-    // Find the textarea - go up from button to parent, then find textarea sibling
-    let currentElement = buttonElement;
-    let textarea = null;
+    // Get the textarea reference from the button's data attribute
+    const textareaRefId = buttonElement.getAttribute('data-textarea-ref');
+    console.log(`[lore-spoilers] Textarea ref ID:`, textareaRefId);
     
-    // Try going up a few levels to find the world_entry container
-    for (let i = 0; i < 5; i++) {
-        if (currentElement.parentElement) {
-            currentElement = currentElement.parentElement;
-            console.log(`[lore-spoilers] Checking parent level ${i}, class:`, currentElement.className);
-            
-            // Look for textarea in this container
-            textarea = currentElement.querySelector('textarea[name="comment"]') || 
-                      currentElement.querySelector('textarea[name="world_info_entry_content"]') ||
-                      currentElement.querySelector('textarea');
-            
-            if (textarea) {
-                console.log(`[lore-spoilers] Found textarea at level ${i}, value length:`, textarea.value.length);
-                if (textarea.value && textarea.value.length > 0) {
-                    break;
-                }
-            }
-        }
-    }
+    const textarea = window[textareaRefId];
     
     if (!textarea) {
-        console.error(`[lore-spoilers] Could not find textarea relative to button`);
+        console.error(`[lore-spoilers] Could not find textarea with ref:`, textareaRefId);
         toastr.error("Could not find entry textarea", "Lore Spoilers");
         return;
     }
     
-    console.log(`[lore-spoilers] Calling onCipherEntryClick with textarea value:`, textarea.value.substring(0, 50));
+    console.log(`[lore-spoilers] Found textarea, name:`, textarea.name);
+    console.log(`[lore-spoilers] Textarea value length:`, textarea.value.length);
+    console.log(`[lore-spoilers] First 100 chars:`, textarea.value.substring(0, 100));
+    console.log(`[lore-spoilers] Calling onCipherEntryClick`);
     onCipherEntryClick(textarea);
 };
 
