@@ -257,6 +257,7 @@ function setupWorldInfoMonitoring() {
         processWorldInfoEntries();
         attachWorldInfoListeners();
         attachSaveButtonListeners();
+        injectCipherButtons();
     });
     
     // Observe the world info container
@@ -272,6 +273,88 @@ function setupWorldInfoMonitoring() {
     processWorldInfoEntries();
     attachWorldInfoListeners();
     attachSaveButtonListeners();
+    injectCipherButtons();
+}
+
+// Inject cipher buttons into World Info entries
+function injectCipherButtons() {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    // Find all World Info entry forms
+    const entries = document.querySelectorAll('.world_entry');
+    
+    entries.forEach((entry) => {
+        // Check if we already added the button
+        if (entry.querySelector('.lore-spoiler-cipher-btn')) {
+            return;
+        }
+        
+        // Find the textarea
+        const textarea = entry.querySelector('textarea[name="world_info_entry_content"]');
+        if (!textarea) {
+            return;
+        }
+        
+        // Create cipher button
+        const cipherBtn = document.createElement('div');
+        cipherBtn.className = 'lore-spoiler-cipher-btn';
+        cipherBtn.innerHTML = `
+            <input type="button" class="menu_button menu_button_icon" value="🔒 Cipher This Entry" title="Hide this entry with Caesar cipher" />
+        `;
+        
+        // Find a good place to insert the button (after the textarea)
+        const buttonContainer = entry.querySelector('.world_entry_form_control') || entry;
+        const button = cipherBtn.querySelector('input');
+        
+        // Insert button after textarea
+        if (textarea.parentElement) {
+            textarea.parentElement.appendChild(cipherBtn);
+        }
+        
+        // Attach click handler
+        button.addEventListener('click', () => onCipherEntryClick(textarea));
+    });
+}
+
+// Handle clicking cipher button on individual entry
+function onCipherEntryClick(textarea) {
+    if (!extension_settings[extensionName].enabled) {
+        return;
+    }
+    
+    const currentValue = textarea.value;
+    const spoilerTag = extension_settings[extensionName].spoilerTag;
+    
+    // Check if empty
+    if (!currentValue || currentValue.trim().length === 0) {
+        toastr.warning("Entry is empty", "Lore Spoilers");
+        return;
+    }
+    
+    // Check if starts with spoiler tag
+    if (!currentValue.startsWith(spoilerTag)) {
+        toastr.info(`Entry must start with ${spoilerTag}`, "Lore Spoilers");
+        return;
+    }
+    
+    // Cipher this entry
+    const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+    textarea.setAttribute('data-lore-spoiler-id', textareaId);
+    
+    const ciphered = processSpoilerText(currentValue);
+    
+    displayCipheredTextareas.set(textareaId, {
+        plaintext: currentValue,
+        ciphered: ciphered,
+        isRevealed: false
+    });
+    
+    // Update display
+    textarea.value = ciphered;
+    
+    toastr.success("Entry ciphered", "Lore Spoilers");
 }
 
 // Attach listeners to save/close buttons to restore plaintext before save
