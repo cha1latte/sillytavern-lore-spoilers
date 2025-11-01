@@ -75,45 +75,89 @@ async function onCipherAllClick() {
     
     try {
         const context = getContext();
+        const shift = extension_settings[extensionName].cipherShift;
         
-        // Search for anything world-info related
-        console.log('[lore-spoilers] Searching for world info in context...');
-        const worldKeys = Object.keys(context).filter(key => 
-            key.toLowerCase().includes('world') || 
-            key.toLowerCase().includes('lore') ||
-            key.toLowerCase().includes('book')
-        );
-        console.log('[lore-spoilers] Keys containing world/lore/book:', worldKeys);
-        
-        // Try to access global world_info variables
-        console.log('[lore-spoilers] window.world_info:', window.world_info);
-        console.log('[lore-spoilers] window.world_info_data:', window.world_info_data);
-        
-        // Try to import world info module
-        let worldInfo = null;
-        
-        // Check if there's a world info manager in context
-        if (context.worldInfoManager) {
-            console.log('[lore-spoilers] Found worldInfoManager');
-            worldInfo = context.worldInfoManager;
-        }
-        
-        // Check window object
-        if (!worldInfo && window.world_info) {
-            console.log('[lore-spoilers] Using window.world_info');
-            worldInfo = window.world_info;
-        }
-        
-        // Check for selected world info
-        const selectedWorldInfo = document.querySelector('#world_info_name')?.value;
-        console.log('[lore-spoilers] Selected world info name:', selectedWorldInfo);
-        
-        if (!worldInfo) {
-            toastr.error("Cannot access World Info. This might require a different approach.", "Lore Spoilers");
-            console.error('[lore-spoilers] Could not find World Info data anywhere');
-            console.log('[lore-spoilers] Full context keys:', Object.keys(context));
+        // Get the currently selected world info name from the dropdown
+        const worldInfoSelect = document.querySelector('#world_info');
+        if (!worldInfoSelect) {
+            toastr.warning("Could not find World Info selector.", "Lore Spoilers");
             return;
         }
+        
+        const selectedOptions = Array.from(worldInfoSelect.selectedOptions);
+        if (selectedOptions.length === 0) {
+            toastr.warning("No lorebook is currently selected.", "Lore Spoilers");
+            return;
+        }
+        
+        const lorebookName = selectedOptions[0].value;
+        console.log(`[lore-spoilers] Selected lorebook: ${lorebookName}`);
+        
+        if (!lorebookName) {
+            toastr.warning("Could not determine lorebook name.", "Lore Spoilers");
+            return;
+        }
+        
+        // Load the world info data using SillyTavern's API
+        const worldInfoData = await context.loadWorldInfo(lorebookName);
+        
+        if (!worldInfoData || !worldInfoData.entries) {
+            toastr.warning("Could not load lorebook data.", "Lore Spoilers");
+            console.error('[lore-spoilers] worldInfoData:', worldInfoData);
+            return;
+        }
+        
+        console.log(`[lore-spoilers] Loaded ${worldInfoData.entries.length} entries from ${lorebookName}`);
+        
+        let cipheredCount = 0;
+        
+        // Cipher ALL entries
+        worldInfoData.entries.forEach((entry, idx) => {
+            if (!entry.content || !entry.content.trim()) {
+                console.log(`[lore-spoilers] Entry ${idx}: Empty, skipping`);
+                return;
+            }
+            
+            const originalContent = entry.content;
+            const ciphered = caesarCipher(originalContent, shift);
+            
+            console.log(`[lore-spoilers] Entry ${idx} (uid=${entry.uid}): Ciphering ${originalContent.length} chars`);
+            
+            // Store plaintext for restoration
+            displayCipheredEntries.set(entry.uid, {
+                plaintext: originalContent,
+                ciphered: ciphered,
+                lorebookName: lorebookName
+            });
+            
+            // Modify content
+            entry.content = ciphered;
+            
+            // Update visible textarea if exists
+            const textarea = document.querySelector(`textarea[id="world_entry_content_${entry.uid}"]`);
+            if (textarea) {
+                textarea.value = ciphered;
+            }
+            
+            cipheredCount++;
+        });
+        
+        // Save the modified lorebook using SillyTavern's API
+        await context.saveWorldInfo(lorebookName, worldInfoData);
+        
+        console.log(`[lore-spoilers] Saved ${cipheredCount} ciphered entries to ${lorebookName}`);
+        
+        if (cipheredCount > 0) {
+            toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'} (all entries, including collapsed)`, "Lore Spoilers");
+        } else {
+            toastr.info("No entries with content found", "Lore Spoilers");
+        }
+        
+    } catch (error) {
+        console.error('[lore-spoilers] Error:', error);
+        toastr.error(`Failed to cipher: ${error.message}`, "Lore Spoilers");
+    }
+}
         
         console.log(`[lore-spoilers] Found ${worldInfo.entries.length} entries in lorebook`);
         
@@ -177,23 +221,41 @@ async function onRevealAllClick() {
     
     try {
         const context = getContext();
-        const worldInfo = context.world_info_data;
         
-        if (!worldInfo || !worldInfo.entries) {
-            toastr.warning("No lorebook data found.", "Lore Spoilers");
+        // Get the currently selected world info
+        const worldInfoSelect = document.querySelector('#world_info');
+        if (!worldInfoSelect) {
+            toastr.warning("Could not find World Info selector.", "Lore Spoilers");
+            return;
+        }
+        
+        const selectedOptions = Array.from(worldInfoSelect.selectedOptions);
+        if (selectedOptions.length === 0) {
+            toastr.warning("No lorebook is currently selected.", "Lore Spoilers");
+            return;
+        }
+        
+        const lorebookName = selectedOptions[0].value;
+        console.log(`[lore-spoilers] Selected lorebook: ${lorebookName}`);
+        
+        // Load the world info data
+        const worldInfoData = await context.loadWorldInfo(lorebookName);
+        
+        if (!worldInfoData || !worldInfoData.entries) {
+            toastr.warning("Could not load lorebook data.", "Lore Spoilers");
             return;
         }
         
         let revealedCount = 0;
         
         // Restore plaintext for all ciphered entries
-        worldInfo.entries.forEach((entry, idx) => {
+        worldInfoData.entries.forEach((entry, idx) => {
             if (displayCipheredEntries.has(entry.uid)) {
                 const data = displayCipheredEntries.get(entry.uid);
                 
                 console.log(`[lore-spoilers] Entry ${idx} (uid=${entry.uid}): Restoring plaintext`);
                 
-                // Restore in data structure
+                // Restore content
                 entry.content = data.plaintext;
                 
                 // Update visible textarea if exists
@@ -206,9 +268,9 @@ async function onRevealAllClick() {
             }
         });
         
-        // Save the lorebook
+        // Save the restored lorebook
         if (revealedCount > 0) {
-            await context.saveWorldInfo(worldInfo.name, true);
+            await context.saveWorldInfo(lorebookName, worldInfoData);
             displayCipheredEntries.clear();
         }
         
