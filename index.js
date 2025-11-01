@@ -128,47 +128,51 @@ function onCipherAllClick() {
         return;
     }
     
-    // Find the World Info container first
     const worldInfoContainer = document.querySelector('#world_popup') || 
-                               document.querySelector('#world_info') ||
-                               document.querySelector('.world_entries_container');
-    
-    console.log('[lore-spoilers] World Info container:', worldInfoContainer);
+                               document.querySelector('#world_info');
     
     if (!worldInfoContainer) {
         toastr.warning("Could not find World Info panel. Make sure it's open.", "Lore Spoilers");
         return;
     }
     
-    // Find ALL content textareas within the World Info container
-    const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
-    console.log(`[lore-spoilers] Found ${textareas.length} textareas in World Info`);
+    // Find all visible entry containers (not template)
+    const visibleEntries = worldInfoContainer.querySelectorAll('.world_entry:not(#entry_edit_template)');
+    console.log(`[lore-spoilers] Found ${visibleEntries.length} visible world_entry containers`);
     
-    if (textareas.length === 0) {
-        toastr.warning("No World Info entries found. Open some entries in the lorebook.", "Lore Spoilers");
+    if (visibleEntries.length === 0) {
+        toastr.warning("No World Info entries found.", "Lore Spoilers");
         return;
     }
     
     let cipheredCount = 0;
+    const shift = extension_settings[extensionName].cipherShift;
     
-    textareas.forEach((textarea, idx) => {
-        const currentValue = textarea.value;
-        console.log(`[lore-spoilers] Textarea ${idx}: id="${textarea.id}", length=${currentValue.length}`);
+    // Process each entry
+    visibleEntries.forEach((entry, entryIdx) => {
+        // Find the CONTENT textarea specifically (not the title/comment one)
+        const contentTextarea = entry.querySelector('textarea[name="content"][id^="world_entry_content"]');
         
-        // Skip if empty
-        if (!currentValue || !currentValue.trim()) {
-            console.log(`[lore-spoilers] Textarea ${idx} is empty, skipping`);
+        if (!contentTextarea) {
+            console.log(`[lore-spoilers] Entry ${entryIdx}: Content textarea not found (entry may be collapsed)`);
             return;
         }
         
-        console.log(`[lore-spoilers] Processing textarea ${idx}...`);
+        const currentValue = contentTextarea.value;
         
-        // Cipher ALL entries (no spoiler tag required for global button)
-        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
-        textarea.setAttribute('data-lore-spoiler-id', textareaId);
+        if (!currentValue || !currentValue.trim()) {
+            console.log(`[lore-spoilers] Entry ${entryIdx}: Content is empty, skipping`);
+            return;
+        }
         
-        const ciphered = processSpoilerText(currentValue);
-        console.log(`[lore-spoilers] Ciphered textarea ${idx}, original length=${currentValue.length}, ciphered length=${ciphered.length}`);
+        console.log(`[lore-spoilers] Entry ${entryIdx}: Found content textarea with length=${currentValue.length}`);
+        
+        // Generate unique ID for this entry
+        const textareaId = contentTextarea.id || `lore_${Date.now()}_${entryIdx}`;
+        contentTextarea.setAttribute('data-lore-spoiler-id', textareaId);
+        
+        // Cipher the content
+        const ciphered = caesarCipher(currentValue, shift);
         
         displayCipheredTextareas.set(textareaId, {
             plaintext: currentValue,
@@ -176,22 +180,8 @@ function onCipherAllClick() {
             isRevealed: false
         });
         
-        textarea.value = ciphered;
-        console.log(`[lore-spoilers] Set textarea ${idx} value to ciphered text`);
-        
-        // Toggle per-entry buttons if they exist (for open entries)
-        const entry = textarea.closest('.world_entry');
-        if (entry) {
-            const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
-            if (buttonContainer) {
-                const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
-                const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
-                if (cipherBtn && revealBtn) {
-                    cipherBtn.style.display = 'none';
-                    revealBtn.style.display = 'inline-block';
-                }
-            }
-        }
+        contentTextarea.value = ciphered;
+        console.log(`[lore-spoilers] Entry ${entryIdx}: Ciphered content`);
         
         cipheredCount++;
     });
@@ -199,9 +189,10 @@ function onCipherAllClick() {
     console.log(`[lore-spoilers] Ciphered ${cipheredCount} entries total`);
     
     if (cipheredCount > 0) {
-        toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+        toastr.success(`Ciphered ${cipheredCount} expanded ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+        toastr.info("Note: Collapsed entries were not ciphered. Expand them first to cipher all entries.", "Lore Spoilers", {timeOut: 5000});
     } else {
-        toastr.info("No entries found to cipher", "Lore Spoilers");
+        toastr.warning("No expanded entries with content found. Please expand entries before ciphering.", "Lore Spoilers");
     }
 }
 
@@ -214,13 +205,24 @@ function onRevealAllClick() {
     
     let revealedCount = 0;
     
-    // Find all entries with ciphered data
+    // Find all ciphered content textareas and restore them
     displayCipheredTextareas.forEach((data, textareaId) => {
-        const textarea = document.querySelector(`textarea[data-lore-spoiler-id="${textareaId}"]`);
+        const textarea = document.querySelector(`textarea[id="${textareaId}"]`) ||
+                        document.querySelector(`textarea[data-lore-spoiler-id="${textareaId}"]`);
         
         if (textarea && !data.isRevealed) {
             textarea.value = data.plaintext;
             data.isRevealed = true;
+            revealedCount++;
+        }
+    });
+    
+    if (revealedCount > 0) {
+        toastr.success(`Revealed ${revealedCount} ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+    } else {
+        toastr.info("No ciphered entries to reveal", "Lore Spoilers");
+    }
+}
             
             // Toggle per-entry buttons if they exist
             const entry = textarea.closest('.world_entry');
