@@ -9,30 +9,26 @@
                 <input id="lore_spoilers_enabled" type="checkbox" />
                 <label for="lore_spoilers_enabled">Enable Lore Spoilers</label>
             </div>
-            <p><small>When enabled, you can cipher entire lorebooks to hide spoilers from yourself while the LLM still sees the plaintext.</small></p>
             
             <hr>
             
             <div>
-                <label for="lore_spoilers_shift"><strong>Caesar Cipher Shift (1-25):</strong></label>
-                <input id="lore_spoilers_shift" class="text_pole" type="number" min="1" max="25" />
-                <p><small>Number of positions to shift each letter. Default is 13 (ROT13).</small></p>
+                <label for="lore_spoilers_shift"><strong>Caesar Cipher Shift:</strong></label>
+                <input id="lore_spoilers_shift" class="text_pole" type="number" min="1" max="25" style="width: 80px;" />
+                <small>(1-25, default is 13)</small>
             </div>
             
             <hr>
             
             <div>
-                <strong>How to Use:</strong>
+                <strong>Usage:</strong>
                 <ol>
-                    <li>Enable the extension above</li>
-                    <li>Go to World Info panel (book icon)</li>
-                    <li>Open a lorebook</li>
-                    <li>Expand ALL entries you want to cipher</li>
-                    <li>Click "🔒 Cipher This Lorebook" button at the top</li>
-                    <li>Click "👁️ Reveal This Lorebook" to show them again</li>
+                    <li>Open a lorebook in World Info</li>
+                    <li>Expand all entries you want to hide</li>
+                    <li>Click "🔒 Cipher This Lorebook"</li>
+                    <li>Entries are now hidden from you!</li>
                 </ol>
-                <p><strong>Important:</strong> You must expand all entries before ciphering. Collapsed entries won't be ciphered.</p>
-                <p><strong>LLM Access:</strong> The LLM always receives the unciphered plaintext automatically!</p>
+                <p><small><strong>Note:</strong> The LLM always sees the original plaintext.</small></p>
             </div>
         </div>
     </div>
