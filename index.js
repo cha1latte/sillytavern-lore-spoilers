@@ -128,21 +128,24 @@ function onCipherAllClick() {
         return;
     }
     
-    // Find the World Info container - textareas are in entry_edit_template
-    const worldInfoContainer = document.querySelector('#entry_edit_template') ||
-                               document.querySelector('#world_popup') || 
+    // Find the World Info container first
+    const worldInfoContainer = document.querySelector('#world_popup') || 
                                document.querySelector('#world_info') ||
-                               document.querySelector('.world_entries_container') ||
-                               document.body; // Fallback to body
+                               document.querySelector('.world_entries_container');
     
-    console.log('[lore-spoilers] World Info container:', worldInfoContainer?.id || 'body');
+    console.log('[lore-spoilers] World Info container:', worldInfoContainer);
     
-    // Find ALL content textareas within the container
+    if (!worldInfoContainer) {
+        toastr.warning("Could not find World Info panel. Make sure it's open.", "Lore Spoilers");
+        return;
+    }
+    
+    // Find ALL content textareas within the World Info container
     const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
-    console.log(`[lore-spoilers] Found ${textareas.length} textareas in container`);
+    console.log(`[lore-spoilers] Found ${textareas.length} textareas in World Info`);
     
     if (textareas.length === 0) {
-        toastr.warning("No World Info entries found. Make sure the lorebook is open.", "Lore Spoilers");
+        toastr.warning("No World Info entries found. Open some entries in the lorebook.", "Lore Spoilers");
         return;
     }
     
