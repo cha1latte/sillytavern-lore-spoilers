@@ -43,8 +43,137 @@ function caesarCipher(text, shift) {
     }).join('');
 }
 
-// Handle clicking "Cipher Entire Lorebook" button
-async function onCipherAllClick() {
+// Apply blur to all World Info content to prevent spoilers during expansion
+function blurAllContent() {
+    const style = document.createElement('style');
+    style.id = 'lore-spoilers-blur-style';
+    style.textContent = `
+        textarea[name="content"],
+        textarea[id^="world_entry_content"] {
+            filter: blur(10px) !important;
+            user-select: none !important;
+            pointer-events: none !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Remove blur from content
+function unblurAllContent() {
+    const style = document.getElementById('lore-spoilers-blur-style');
+    if (style) {
+        style.remove();
+    }
+}
+
+// Expand all entries and cipher them automatically
+async function onExpandAndCipherClick() {
+    console.log('[lore-spoilers] onExpandAndCipherClick called');
+    
+    if (!extension_settings[extensionName].enabled) {
+        toastr.warning("Extension is disabled", "Lore Spoilers");
+        return;
+    }
+    
+    try {
+        const worldInfoContainer = document.querySelector('#world_popup') || 
+                                   document.querySelector('#world_info');
+        
+        if (!worldInfoContainer) {
+            toastr.warning("Could not find World Info panel. Make sure it's open.", "Lore Spoilers");
+            return;
+        }
+        
+        // Apply blur first to prevent seeing content
+        blurAllContent();
+        toastr.info("Expanding entries (content hidden)...", "Lore Spoilers", {timeOut: 2000});
+        
+        // Wait a moment for blur to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Find all collapsed entries (entries without visible content textarea)
+        const allEntries = worldInfoContainer.querySelectorAll('.world_entry:not(#entry_edit_template)');
+        console.log(`[lore-spoilers] Found ${allEntries.length} total entries`);
+        
+        let expandedCount = 0;
+        
+        // Click to expand each collapsed entry
+        for (const entry of allEntries) {
+            const contentTextarea = entry.querySelector('textarea[name="content"]');
+            
+            // If no content textarea visible, this entry is collapsed
+            if (!contentTextarea || !contentTextarea.offsetParent) {
+                // Find and click the expand button
+                const expandButton = entry.querySelector('.world_entry_form_header, .world_entry_form_control, .inline-drawer-toggle');
+                if (expandButton) {
+                    expandButton.click();
+                    expandedCount++;
+                    // Small delay between clicks
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            }
+        }
+        
+        console.log(`[lore-spoilers] Expanded ${expandedCount} entries`);
+        
+        // Wait for DOM to update with all textareas
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Now cipher all the expanded content
+        const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
+        console.log(`[lore-spoilers] Found ${textareas.length} textareas to cipher`);
+        
+        if (textareas.length === 0) {
+            unblurAllContent();
+            toastr.warning("No entries found to cipher.", "Lore Spoilers");
+            return;
+        }
+        
+        let cipheredCount = 0;
+        const shift = 13;
+        
+        textareas.forEach((textarea, idx) => {
+            const currentValue = textarea.value;
+            
+            if (!currentValue || !currentValue.trim()) {
+                return;
+            }
+            
+            const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${idx}`;
+            textarea.setAttribute('data-lore-spoiler-id', textareaId);
+            
+            const ciphered = caesarCipher(currentValue, shift);
+            
+            displayCipheredTextareas.set(textareaId, {
+                plaintext: currentValue,
+                ciphered: ciphered,
+                isRevealed: false
+            });
+            
+            textarea.value = ciphered;
+            cipheredCount++;
+        });
+        
+        // Remove blur now that content is ciphered
+        unblurAllContent();
+        
+        console.log(`[lore-spoilers] Ciphered ${cipheredCount} entries`);
+        
+        if (cipheredCount > 0) {
+            toastr.success(`✅ Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'} without spoiling!`, "Lore Spoilers", {timeOut: 4000});
+        } else {
+            toastr.info("No entries with content found", "Lore Spoilers");
+        }
+        
+    } catch (error) {
+        unblurAllContent();
+        console.error('[lore-spoilers] Error:', error);
+        toastr.error(`Failed: ${error.message}`, "Lore Spoilers");
+    }
+}
+
+// Handle clicking "Cipher Entire Lorebook" button (for already-expanded entries)
+function onCipherAllClick() {
     console.log('[lore-spoilers] onCipherAllClick called');
     
     if (!extension_settings[extensionName].enabled) {
@@ -52,174 +181,78 @@ async function onCipherAllClick() {
         return;
     }
     
-    try {
-        const context = getContext();
+    const worldInfoContainer = document.querySelector('#world_popup') || 
+                               document.querySelector('#world_info') ||
+                               document.querySelector('.world_entries_container');
+    
+    if (!worldInfoContainer) {
+        toastr.warning("Could not find World Info panel. Make sure it's open.", "Lore Spoilers");
+        return;
+    }
+    
+    const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
+    console.log(`[lore-spoilers] Found ${textareas.length} textareas`);
+    
+    if (textareas.length === 0) {
+        toastr.warning("No expanded entries found. Please expand entries first (use Expand All button).", "Lore Spoilers", {timeOut: 5000});
+        return;
+    }
+    
+    let cipheredCount = 0;
+    const shift = 13; // Fixed ROT13
+    
+    textareas.forEach((textarea, idx) => {
+        const currentValue = textarea.value;
         
-        // Get selected lorebook name from dropdown
-        const worldInfoSelect = document.querySelector('#world_info');
-        if (!worldInfoSelect) {
-            toastr.warning("Could not find World Info selector.", "Lore Spoilers");
+        if (!currentValue || !currentValue.trim()) {
             return;
         }
         
-        const selectedOptions = Array.from(worldInfoSelect.selectedOptions);
-        if (selectedOptions.length === 0) {
-            toastr.warning("No lorebook is currently selected.", "Lore Spoilers");
-            return;
-        }
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${idx}`;
+        textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
-        const lorebookName = selectedOptions[0].value;
-        console.log(`[lore-spoilers] Selected lorebook: ${lorebookName}`);
+        const ciphered = caesarCipher(currentValue, shift);
         
-        const shift = 13; // Fixed ROT13
-        
-        // Use SillyTavern's loadWorldInfo function
-        const worldInfoData = await context.loadWorldInfo(lorebookName);
-        
-        console.log('[lore-spoilers] worldInfoData:', worldInfoData);
-        console.log('[lore-spoilers] worldInfoData type:', typeof worldInfoData);
-        console.log('[lore-spoilers] worldInfoData.entries:', worldInfoData?.entries);
-        console.log('[lore-spoilers] worldInfoData keys:', worldInfoData ? Object.keys(worldInfoData) : 'null');
-        
-        if (!worldInfoData) {
-            toastr.warning("Failed to load lorebook.", "Lore Spoilers");
-            return;
-        }
-        
-        // Check different possible structures
-        let entries = worldInfoData.entries || worldInfoData;
-        
-        if (!entries || !Array.isArray(entries)) {
-            toastr.warning("No entries array found in lorebook data.", "Lore Spoilers");
-            console.error('[lore-spoilers] Expected array, got:', entries);
-            return;
-        }
-        
-        console.log(`[lore-spoilers] Loaded ${entries.length} entries`);
-        
-        let cipheredCount = 0;
-        
-        // Cipher ALL entries in the data
-        entries.forEach((entry, idx) => {
-            if (!entry.content || !entry.content.trim()) {
-                return;
-            }
-            
-            const originalContent = entry.content;
-            const ciphered = caesarCipher(originalContent, shift);
-            
-            console.log(`[lore-spoilers] Entry ${idx} (uid=${entry.uid}): Ciphering`);
-            
-            // Store plaintext for restoration
-            displayCipheredTextareas.set(entry.uid, {
-                plaintext: originalContent,
-                ciphered: ciphered,
-                lorebookName: lorebookName
-            });
-            
-            // Modify in data structure
-            entry.content = ciphered;
-            
-            // Update visible textarea if exists
-            const textarea = document.querySelector(`textarea[id="world_entry_content_${entry.uid}"]`);
-            if (textarea) {
-                textarea.value = ciphered;
-            }
-            
-            cipheredCount++;
+        displayCipheredTextareas.set(textareaId, {
+            plaintext: currentValue,
+            ciphered: ciphered,
+            isRevealed: false
         });
         
-        // Use SillyTavern's saveWorldInfo function
-        await context.saveWorldInfo(lorebookName, worldInfoData);
-        
-        console.log(`[lore-spoilers] Saved ${cipheredCount} ciphered entries`);
-        
-        if (cipheredCount > 0) {
-            toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'} (including collapsed)`, "Lore Spoilers");
-        } else {
-            toastr.info("No entries with content found", "Lore Spoilers");
-        }
-        
-    } catch (error) {
-        console.error('[lore-spoilers] Error:', error);
-        toastr.error(`Failed to cipher: ${error.message}`, "Lore Spoilers");
+        textarea.value = ciphered;
+        cipheredCount++;
+    });
+    
+    if (cipheredCount > 0) {
+        toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+    } else {
+        toastr.info("No entries with content found", "Lore Spoilers");
     }
 }
 
 // Handle clicking "Reveal Entire Lorebook" button
-async function onRevealAllClick() {
-    console.log('[lore-spoilers] onRevealAllClick called');
-    
+function onRevealAllClick() {
     if (!extension_settings[extensionName].enabled) {
         toastr.warning("Extension is disabled", "Lore Spoilers");
         return;
     }
     
-    try {
-        const context = getContext();
+    let revealedCount = 0;
+    
+    displayCipheredTextareas.forEach((data, textareaId) => {
+        const textarea = document.querySelector(`textarea[data-lore-spoiler-id="${textareaId}"]`);
         
-        // Get selected lorebook
-        const worldInfoSelect = document.querySelector('#world_info');
-        if (!worldInfoSelect) {
-            toastr.warning("Could not find World Info selector.", "Lore Spoilers");
-            return;
+        if (textarea && !data.isRevealed) {
+            textarea.value = data.plaintext;
+            data.isRevealed = true;
+            revealedCount++;
         }
-        
-        const selectedOptions = Array.from(worldInfoSelect.selectedOptions);
-        if (selectedOptions.length === 0) {
-            toastr.warning("No lorebook is currently selected.", "Lore Spoilers");
-            return;
-        }
-        
-        const lorebookName = selectedOptions[0].value;
-        
-        // Use SillyTavern's loadWorldInfo function
-        const worldInfoData = await context.loadWorldInfo(lorebookName);
-        
-        if (!worldInfoData || !worldInfoData.entries) {
-            toastr.warning("No entries found in lorebook.", "Lore Spoilers");
-            return;
-        }
-        
-        let revealedCount = 0;
-        
-        // Restore plaintext for all ciphered entries
-        worldInfoData.entries.forEach((entry) => {
-            if (displayCipheredTextareas.has(entry.uid)) {
-                const data = displayCipheredTextareas.get(entry.uid);
-                
-                console.log(`[lore-spoilers] Entry uid=${entry.uid}: Restoring plaintext`);
-                
-                // Restore in data
-                entry.content = data.plaintext;
-                
-                // Update visible textarea if exists
-                const textarea = document.querySelector(`textarea[id="world_entry_content_${entry.uid}"]`);
-                if (textarea) {
-                    textarea.value = data.plaintext;
-                }
-                
-                revealedCount++;
-            }
-        });
-        
-        // Use SillyTavern's saveWorldInfo function
-        if (revealedCount > 0) {
-            await context.saveWorldInfo(lorebookName, worldInfoData);
-            displayCipheredTextareas.clear();
-        }
-        
-        console.log(`[lore-spoilers] Revealed ${revealedCount} entries`);
-        
-        if (revealedCount > 0) {
-            toastr.success(`Revealed ${revealedCount} ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
-        } else {
-            toastr.info("No ciphered entries to reveal", "Lore Spoilers");
-        }
-        
-    } catch (error) {
-        console.error('[lore-spoilers] Error:', error);
-        toastr.error(`Failed to reveal: ${error.message}`, "Lore Spoilers");
+    });
+    
+    if (revealedCount > 0) {
+        toastr.success(`Revealed ${revealedCount} ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
+    } else {
+        toastr.info("No ciphered entries to reveal", "Lore Spoilers");
     }
 }
 
@@ -273,13 +306,17 @@ function injectLorebookButtons() {
     buttonContainer.className = 'lore-spoiler-lorebook-btns';
     buttonContainer.style.cssText = 'margin: 10px 0; padding: 10px; border: 1px solid var(--SmartThemeBorderColor); border-radius: 5px;';
     buttonContainer.innerHTML = `
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="button" class="menu_button menu_button_icon lore-expand-cipher-btn" 
+                   value="🔒 Expand & Cipher All" 
+                   title="Automatically expand all entries and cipher them (content stays hidden)" 
+                   style="background: var(--SmartThemeBlurTintColor); font-weight: bold;" />
             <input type="button" class="menu_button menu_button_icon lore-cipher-lorebook-btn" 
-                   value="🔒 Cipher This Lorebook" 
-                   title="Hide all entries (including collapsed ones)" />
+                   value="🔒 Cipher Expanded Only" 
+                   title="Cipher only already-expanded entries" />
             <input type="button" class="menu_button menu_button_icon lore-reveal-lorebook-btn" 
-                   value="👁️ Reveal This Lorebook" 
-                   title="Show all entries"
+                   value="👁️ Reveal All" 
+                   title="Show all ciphered entries"
                    style="display: none;" />
         </div>
     `;
@@ -290,17 +327,27 @@ function injectLorebookButtons() {
         lorebookContainer.appendChild(buttonContainer);
     }
     
+    const expandCipherBtn = buttonContainer.querySelector('.lore-expand-cipher-btn');
     const cipherBtn = buttonContainer.querySelector('.lore-cipher-lorebook-btn');
     const revealBtn = buttonContainer.querySelector('.lore-reveal-lorebook-btn');
     
+    expandCipherBtn.addEventListener('click', async () => {
+        await onExpandAndCipherClick();
+        expandCipherBtn.style.display = 'none';
+        cipherBtn.style.display = 'none';
+        revealBtn.style.display = 'inline-block';
+    });
+    
     cipherBtn.addEventListener('click', () => {
         onCipherAllClick();
+        expandCipherBtn.style.display = 'none';
         cipherBtn.style.display = 'none';
         revealBtn.style.display = 'inline-block';
     });
     
     revealBtn.addEventListener('click', () => {
         onRevealAllClick();
+        expandCipherBtn.style.display = 'inline-block';
         cipherBtn.style.display = 'inline-block';
         revealBtn.style.display = 'none';
     });
