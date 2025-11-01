@@ -92,18 +92,49 @@ async function onExpandAndCipherClick() {
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // Set pagination to 1000/page to ensure we get all entries
-        const paginationSelect = worldInfoContainer.querySelector('.J-paginationjs-size-select');
+        console.log('[lore-spoilers] Looking for pagination selector...');
+        let paginationSelect = worldInfoContainer.querySelector('.J-paginationjs-size-select');
+        
+        if (!paginationSelect) {
+            // Try document-wide search
+            paginationSelect = document.querySelector('.J-paginationjs-size-select');
+            console.log('[lore-spoilers] Tried document-wide:', paginationSelect);
+        }
+        
+        if (!paginationSelect) {
+            // Try other common selectors
+            paginationSelect = document.querySelector('select[class*="pagination"]') ||
+                              document.querySelector('select option[value="1000"]')?.parentElement;
+            console.log('[lore-spoilers] Tried alternative selectors:', paginationSelect);
+        }
+        
         if (paginationSelect) {
+            console.log('[lore-spoilers] Found pagination select:', paginationSelect);
+            console.log('[lore-spoilers] Current value:', paginationSelect.value);
+            console.log('[lore-spoilers] Available options:', Array.from(paginationSelect.options).map(o => o.value));
+            
             const option1000 = Array.from(paginationSelect.options).find(opt => opt.value === '1000');
             if (option1000) {
                 paginationSelect.value = '1000';
-                // Trigger change event to update the display
+                
+                // Try multiple ways to trigger the change
                 paginationSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                paginationSelect.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // Try jQuery trigger if available
+                if (typeof $ !== 'undefined') {
+                    $(paginationSelect).trigger('change');
+                }
+                
                 console.log('[lore-spoilers] Set pagination to 1000/page');
                 
-                // Wait for pagination to update
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Wait longer for pagination to update
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+                console.log('[lore-spoilers] No 1000/page option found');
             }
+        } else {
+            console.log('[lore-spoilers] Could not find pagination selector');
         }
         
         // Find all collapsed entries (entries without visible content textarea)
