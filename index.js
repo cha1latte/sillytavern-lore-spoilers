@@ -91,6 +91,21 @@ async function onExpandAndCipherClick() {
         // Wait a moment for blur to apply
         await new Promise(resolve => setTimeout(resolve, 100));
         
+        // Set pagination to 1000/page to ensure we get all entries
+        const paginationSelect = worldInfoContainer.querySelector('.J-paginationjs-size-select');
+        if (paginationSelect) {
+            const option1000 = Array.from(paginationSelect.options).find(opt => opt.value === '1000');
+            if (option1000) {
+                paginationSelect.value = '1000';
+                // Trigger change event to update the display
+                paginationSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log('[lore-spoilers] Set pagination to 1000/page');
+                
+                // Wait for pagination to update
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
         // Find all collapsed entries (entries without visible content textarea)
         const allEntries = worldInfoContainer.querySelectorAll('.world_entry:not(#entry_edit_template)');
         console.log(`[lore-spoilers] Found ${allEntries.length} total entries`);
