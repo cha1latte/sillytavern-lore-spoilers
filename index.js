@@ -75,27 +75,43 @@ async function onCipherAllClick() {
     
     try {
         const context = getContext();
-        console.log('[lore-spoilers] context keys:', Object.keys(context));
-        console.log('[lore-spoilers] context.world_info_data:', context.world_info_data);
-        console.log('[lore-spoilers] context.worldInfoData:', context.worldInfoData);
-        console.log('[lore-spoilers] context.world_info:', context.world_info);
         
-        const shift = extension_settings[extensionName].cipherShift;
+        // Search for anything world-info related
+        console.log('[lore-spoilers] Searching for world info in context...');
+        const worldKeys = Object.keys(context).filter(key => 
+            key.toLowerCase().includes('world') || 
+            key.toLowerCase().includes('lore') ||
+            key.toLowerCase().includes('book')
+        );
+        console.log('[lore-spoilers] Keys containing world/lore/book:', worldKeys);
         
-        // Try multiple possible property names
-        const worldInfo = context.world_info_data || context.worldInfoData || context.world_info;
+        // Try to access global world_info variables
+        console.log('[lore-spoilers] window.world_info:', window.world_info);
+        console.log('[lore-spoilers] window.world_info_data:', window.world_info_data);
         
-        console.log('[lore-spoilers] worldInfo:', worldInfo);
+        // Try to import world info module
+        let worldInfo = null;
         
-        if (!worldInfo) {
-            toastr.warning("Could not access World Info data structure.", "Lore Spoilers");
-            console.error('[lore-spoilers] No world info data found in context');
-            return;
+        // Check if there's a world info manager in context
+        if (context.worldInfoManager) {
+            console.log('[lore-spoilers] Found worldInfoManager');
+            worldInfo = context.worldInfoManager;
         }
         
-        if (!worldInfo.entries || worldInfo.entries.length === 0) {
-            toastr.warning("No entries found in current lorebook.", "Lore Spoilers");
-            console.log('[lore-spoilers] worldInfo.entries:', worldInfo.entries);
+        // Check window object
+        if (!worldInfo && window.world_info) {
+            console.log('[lore-spoilers] Using window.world_info');
+            worldInfo = window.world_info;
+        }
+        
+        // Check for selected world info
+        const selectedWorldInfo = document.querySelector('#world_info_name')?.value;
+        console.log('[lore-spoilers] Selected world info name:', selectedWorldInfo);
+        
+        if (!worldInfo) {
+            toastr.error("Cannot access World Info. This might require a different approach.", "Lore Spoilers");
+            console.error('[lore-spoilers] Could not find World Info data anywhere');
+            console.log('[lore-spoilers] Full context keys:', Object.keys(context));
             return;
         }
         
