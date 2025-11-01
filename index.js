@@ -357,10 +357,10 @@ function injectLorebookButtons() {
                    value="🔒 Expand & Cipher All" 
                    title="Automatically expand all entries and cipher them (content stays hidden)" 
                    style="background: var(--SmartThemeBlurTintColor); font-weight: bold;" />
-            <input type="button" class="menu_button menu_button_icon lore-reveal-lorebook-btn" 
+            <input type="button" class="menu_button menu_button_icon lore-reveal-all-btn" 
                    value="👁️ Reveal All" 
                    title="Show all ciphered entries"
-                   style="display: none;" />
+                   style="display: none; background: var(--SmartThemeBlurTintColor); font-weight: bold;" />
         </div>
     `;
     
@@ -371,7 +371,7 @@ function injectLorebookButtons() {
     }
     
     const expandCipherBtn = buttonContainer.querySelector('.lore-expand-cipher-btn');
-    const revealBtn = buttonContainer.querySelector('.lore-reveal-lorebook-btn');
+    const revealBtn = buttonContainer.querySelector('.lore-reveal-all-btn');
     
     expandCipherBtn.addEventListener('click', async () => {
         await onExpandAndCipherClick();
@@ -381,8 +381,8 @@ function injectLorebookButtons() {
     
     revealBtn.addEventListener('click', () => {
         onRevealAllClick();
-        expandCipherBtn.style.display = 'inline-block';
         revealBtn.style.display = 'none';
+        expandCipherBtn.style.display = 'inline-block';
     });
 }
 
