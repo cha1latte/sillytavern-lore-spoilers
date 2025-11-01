@@ -1,53 +1,121 @@
 # Lore Spoilers
 
-This SillyTavern extension hides World Info (Lorebook) entries from your UI to prevent spoilers, while the LLM always receives the original, unobfuscated plaintext.
+A SillyTavern extension that automatically hides World Info (Lorebook) entries from your view to prevent spoilers, while the LLM always receives the original, unobfuscated plaintext.
 
-Perfect for scenarios where you want the AI to know about future plot twists, secret character knowledge, or story branches without spoiling them for yourself.
+Perfect for when you want to generate AI content about future plot twists, secret character knowledge, or story branches without spoiling them for yourself.
 
 ## Features
 
-- **Spoiler Hiding**: Automatically ciphers and hides the content of any World Info entry that starts with a specific tag (e.g., `[SPOILER]`)
-- **Caesar Cipher**: Uses a classic Caesar cipher to obfuscate text in the UI (configurable shift 1-25)
-- **Configurable Tag**: Set your own spoiler tag
-- **Click to Reveal**: Click into a hidden entry to instantly reveal the original plaintext for editing
+- **🔒 One-Click Spoiler Prevention**: Click one button to hide all lorebook entries
+- **Automatic Expansion**: Expands all entries automatically while keeping content blurred
+- **No Spoilers Seen**: Content is blurred during expansion so you never see plaintext
+- **Caesar Cipher (ROT13)**: Uses a simple cipher to obfuscate text in the UI
 - **LLM Sees All**: The LLM always receives the original, unobfuscated plaintext for full context
-- **Simple UI**: One-click button to hide all spoilers when you're done editing
+- **Pagination Handling**: Automatically shows all entries (up to 1000) before ciphering
+- **Simple UI**: Just two buttons - Cipher and Reveal
 
 ## Installation
 
 1. Open SillyTavern
-2. Go to Extensions → Install Extension
+2. Go to **Extensions → Install Extension**
 3. Paste this repository URL: `https://github.com/your-username/lore-spoilers`
-4. Click Install
+4. Click **Install**
 5. Refresh the page
 
 ## Usage
 
-1. Navigate to the Extensions panel, then click Extension Settings (cog icon)
-2. Find "Lore Spoilers" in the right-hand (UI) column
-3. Enable the "Enable Lore Spoilers" checkbox
-4. (Optional) Configure your preferred Spoiler Tag and Caesar Cipher Shift
-5. Go to the World Info panel (book icon)
-6. Create a new entry or edit an existing one
-7. In the "Content" textarea, add your spoiler tag to the very beginning (e.g., `[SPOILER]Vader is Luke's father`)
-8. Click the "🔒 Hide All Spoilers Now" button in Extension Settings
-9. The content will be replaced with ciphered text in your UI
-10. Click back into the textarea anytime to reveal and edit
-11. The LLM always receives the plaintext version automatically!
+### Quick Start
 
-## How It Works
+1. Open SillyTavern and navigate to **Extensions** settings
+2. Enable "Lore Spoilers" in the UI extensions panel
+3. Open a lorebook in **World Info** (book icon)
+4. Click **"🔒 Expand & Cipher All"** at the top of the lorebook
+5. Done! All entries are now hidden from you
 
-This extension only ciphers what you see in the UI. The World Info database always stores plaintext, so when SillyTavern sends context to the LLM, it automatically includes the unobfuscated spoilers.
+### How It Works
+
+When you click "Expand & Cipher All":
+
+1. **Blur Filter Applied**: All content is immediately blurred so you can't read it
+2. **Pagination Set**: Automatically shows all entries (up to 1000 per page)
+3. **Auto-Expansion**: All collapsed entries are programmatically expanded
+4. **Ciphering**: Each entry's content is replaced with ROT13 ciphered text
+5. **Blur Removed**: Blur is removed, revealing only the ciphered (unreadable) text
+
+**You never see the plaintext!**
+
+### Revealing Entries
+
+Click **"👁️ Reveal All"** to restore all entries to their original plaintext.
+
+## Important Notes
+
+### LLM Access
+
+The LLM **always** receives the original plaintext. The ciphering only affects what you see in the UI. When SillyTavern sends context to the LLM, it automatically includes the unciphered content from the database.
+
+### Saving
+
+The extension automatically ensures plaintext is saved to the database, not ciphered text. You can safely:
+- Save the lorebook
+- Close entries
+- Switch between lorebooks
+- Refresh the page
+
+The plaintext is always preserved.
+
+### Character Limit
+
+The extension handles up to 1000 entries per lorebook. If you have more than 1000 entries, you'll need to manually set the pagination higher before ciphering.
+
+## Use Cases
+
+- **Story Writing**: Generate 50 AI plot twists and cipher them so you can use them later without spoiling yourself
+- **RPG Campaigns**: Hide secret character backgrounds, plot reveals, or future story beats
+- **Interactive Fiction**: Keep branching paths hidden until players discover them
+- **World Building**: Store spoiler-heavy lore without accidentally reading it
+
+## Technical Details
+
+- **Cipher**: ROT13 (Caesar cipher with shift of 13)
+- **Storage**: Plaintext always stored in database
+- **UI Only**: Ciphering only affects the browser display
+- **Save Hook**: Intercepts save operations to ensure plaintext is preserved
 
 ## Requirements
 
 - SillyTavern 1.12.0 or higher
 
+## Troubleshooting
+
+### "No expanded entries found"
+Make sure a lorebook is open in the World Info panel before clicking the button.
+
+### Entries still visible after ciphering
+Refresh the page and try again. Make sure the extension is enabled in settings.
+
+### Some entries not ciphered
+The extension processes up to 1000 entries. If you have more, manually set pagination higher first.
+
 ## Configuration
 
-- **Spoiler Tag**: The tag that marks entries as spoilers (default: `[SPOILER]`)
-- **Caesar Cipher Shift**: Number of positions to shift letters (default: 13 / ROT13)
+The extension has minimal configuration:
+
+- **Enable/Disable**: Toggle the extension on/off
+- **Cipher**: Fixed at ROT13 (shift of 13)
 
 ## License
 
 MIT
+
+## Support
+
+If you encounter issues:
+1. Check the browser console (F12) for error messages
+2. Verify the extension is enabled in settings
+3. Make sure you're using SillyTavern 1.12.0 or higher
+4. Try refreshing the page
+
+## Credits
+
+Created for SillyTavern users who want to generate spoiler-heavy content without spoiling themselves.
