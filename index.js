@@ -75,12 +75,27 @@ async function onCipherAllClick() {
     
     try {
         const context = getContext();
+        console.log('[lore-spoilers] context keys:', Object.keys(context));
+        console.log('[lore-spoilers] context.world_info_data:', context.world_info_data);
+        console.log('[lore-spoilers] context.worldInfoData:', context.worldInfoData);
+        console.log('[lore-spoilers] context.world_info:', context.world_info);
+        
         const shift = extension_settings[extensionName].cipherShift;
         
-        // Get the world info data
-        const worldInfo = context.world_info_data;
-        if (!worldInfo || !worldInfo.entries || worldInfo.entries.length === 0) {
+        // Try multiple possible property names
+        const worldInfo = context.world_info_data || context.worldInfoData || context.world_info;
+        
+        console.log('[lore-spoilers] worldInfo:', worldInfo);
+        
+        if (!worldInfo) {
+            toastr.warning("Could not access World Info data structure.", "Lore Spoilers");
+            console.error('[lore-spoilers] No world info data found in context');
+            return;
+        }
+        
+        if (!worldInfo.entries || worldInfo.entries.length === 0) {
             toastr.warning("No entries found in current lorebook.", "Lore Spoilers");
+            console.log('[lore-spoilers] worldInfo.entries:', worldInfo.entries);
             return;
         }
         
