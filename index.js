@@ -76,18 +76,31 @@ async function onCipherAllClick() {
         // Use SillyTavern's loadWorldInfo function
         const worldInfoData = await context.loadWorldInfo(lorebookName);
         
-        if (!worldInfoData || !worldInfoData.entries) {
-            toastr.warning("No entries found in lorebook.", "Lore Spoilers");
-            console.log('[lore-spoilers] worldInfoData:', worldInfoData);
+        console.log('[lore-spoilers] worldInfoData:', worldInfoData);
+        console.log('[lore-spoilers] worldInfoData type:', typeof worldInfoData);
+        console.log('[lore-spoilers] worldInfoData.entries:', worldInfoData?.entries);
+        console.log('[lore-spoilers] worldInfoData keys:', worldInfoData ? Object.keys(worldInfoData) : 'null');
+        
+        if (!worldInfoData) {
+            toastr.warning("Failed to load lorebook.", "Lore Spoilers");
             return;
         }
         
-        console.log(`[lore-spoilers] Loaded ${worldInfoData.entries.length} entries`);
+        // Check different possible structures
+        let entries = worldInfoData.entries || worldInfoData;
+        
+        if (!entries || !Array.isArray(entries)) {
+            toastr.warning("No entries array found in lorebook data.", "Lore Spoilers");
+            console.error('[lore-spoilers] Expected array, got:', entries);
+            return;
+        }
+        
+        console.log(`[lore-spoilers] Loaded ${entries.length} entries`);
         
         let cipheredCount = 0;
         
         // Cipher ALL entries in the data
-        worldInfoData.entries.forEach((entry, idx) => {
+        entries.forEach((entry, idx) => {
             if (!entry.content || !entry.content.trim()) {
                 return;
             }
