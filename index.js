@@ -53,6 +53,8 @@ async function onCipherAllClick() {
     }
     
     try {
+        const context = getContext();
+        
         // Get selected lorebook name from dropdown
         const worldInfoSelect = document.querySelector('#world_info');
         if (!worldInfoSelect) {
@@ -71,21 +73,12 @@ async function onCipherAllClick() {
         
         const shift = 13; // Fixed ROT13
         
-        // Fetch the lorebook JSON file directly
-        const response = await fetch('/api/worldinfo/get', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: lorebookName })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load lorebook: ${response.status}`);
-        }
-        
-        const worldInfoData = await response.json();
+        // Use SillyTavern's loadWorldInfo function
+        const worldInfoData = await context.loadWorldInfo(lorebookName);
         
         if (!worldInfoData || !worldInfoData.entries) {
             toastr.warning("No entries found in lorebook.", "Lore Spoilers");
+            console.log('[lore-spoilers] worldInfoData:', worldInfoData);
             return;
         }
         
@@ -123,16 +116,8 @@ async function onCipherAllClick() {
             cipheredCount++;
         });
         
-        // Save the modified lorebook back
-        const saveResponse = await fetch('/api/worldinfo/edit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: lorebookName, data: worldInfoData })
-        });
-        
-        if (!saveResponse.ok) {
-            throw new Error(`Failed to save lorebook: ${saveResponse.status}`);
-        }
+        // Use SillyTavern's saveWorldInfo function
+        await context.saveWorldInfo(lorebookName, worldInfoData);
         
         console.log(`[lore-spoilers] Saved ${cipheredCount} ciphered entries`);
         
@@ -158,6 +143,8 @@ async function onRevealAllClick() {
     }
     
     try {
+        const context = getContext();
+        
         // Get selected lorebook
         const worldInfoSelect = document.querySelector('#world_info');
         if (!worldInfoSelect) {
@@ -173,18 +160,8 @@ async function onRevealAllClick() {
         
         const lorebookName = selectedOptions[0].value;
         
-        // Fetch the lorebook
-        const response = await fetch('/api/worldinfo/get', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: lorebookName })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load lorebook: ${response.status}`);
-        }
-        
-        const worldInfoData = await response.json();
+        // Use SillyTavern's loadWorldInfo function
+        const worldInfoData = await context.loadWorldInfo(lorebookName);
         
         if (!worldInfoData || !worldInfoData.entries) {
             toastr.warning("No entries found in lorebook.", "Lore Spoilers");
@@ -213,18 +190,9 @@ async function onRevealAllClick() {
             }
         });
         
-        // Save the restored lorebook
+        // Use SillyTavern's saveWorldInfo function
         if (revealedCount > 0) {
-            const saveResponse = await fetch('/api/worldinfo/edit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: lorebookName, data: worldInfoData })
-            });
-            
-            if (!saveResponse.ok) {
-                throw new Error(`Failed to save lorebook: ${saveResponse.status}`);
-            }
-            
+            await context.saveWorldInfo(lorebookName, worldInfoData);
             displayCipheredTextareas.clear();
         }
         
