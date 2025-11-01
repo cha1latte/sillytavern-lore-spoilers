@@ -167,7 +167,9 @@ function onCipherAllClick() {
         const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
         textarea.setAttribute('data-lore-spoiler-id', textareaId);
         
-        const ciphered = processSpoilerText(currentValue);
+        // Cipher directly without requiring spoiler tag
+        const shift = extension_settings[extensionName].cipherShift;
+        const ciphered = caesarCipher(currentValue, shift);
         console.log(`[lore-spoilers] Ciphered textarea ${idx}, original length=${currentValue.length}, ciphered length=${ciphered.length}`);
         
         displayCipheredTextareas.set(textareaId, {
