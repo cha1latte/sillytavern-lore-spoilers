@@ -128,62 +128,77 @@ function onCipherAllClick() {
         return;
     }
     
-    // Get the World Info data from SillyTavern context
-    const context = getContext();
-    const worldInfoData = context.worldInfoData;
+    // Find the World Info container - textareas are in entry_edit_template
+    const worldInfoContainer = document.querySelector('#entry_edit_template') ||
+                               document.querySelector('#world_popup') || 
+                               document.querySelector('#world_info') ||
+                               document.querySelector('.world_entries_container') ||
+                               document.body; // Fallback to body
     
-    if (!worldInfoData || !worldInfoData.entries || worldInfoData.entries.length === 0) {
-        toastr.warning("No World Info entries found in current lorebook.", "Lore Spoilers");
+    console.log('[lore-spoilers] World Info container:', worldInfoContainer?.id || 'body');
+    
+    // Find ALL content textareas within the container
+    const textareas = worldInfoContainer.querySelectorAll('textarea[name="content"]');
+    console.log(`[lore-spoilers] Found ${textareas.length} textareas in container`);
+    
+    if (textareas.length === 0) {
+        toastr.warning("No World Info entries found. Make sure the lorebook is open.", "Lore Spoilers");
         return;
     }
     
-    console.log(`[lore-spoilers] Found ${worldInfoData.entries.length} entries in lorebook data`);
-    
     let cipheredCount = 0;
-    const shift = extension_settings[extensionName].cipherShift;
     
-    // Cipher ALL entries in the data structure
-    worldInfoData.entries.forEach((entry, idx) => {
-        if (!entry.content || !entry.content.trim()) {
-            console.log(`[lore-spoilers] Entry ${idx}: Empty content, skipping`);
+    textareas.forEach((textarea, idx) => {
+        const currentValue = textarea.value;
+        console.log(`[lore-spoilers] Textarea ${idx}: id="${textarea.id}", length=${currentValue.length}`);
+        
+        // Skip if empty
+        if (!currentValue || !currentValue.trim()) {
+            console.log(`[lore-spoilers] Textarea ${idx} is empty, skipping`);
             return;
         }
         
-        const originalContent = entry.content;
-        console.log(`[lore-spoilers] Entry ${idx}: Processing, length=${originalContent.length}`);
+        console.log(`[lore-spoilers] Processing textarea ${idx}...`);
         
-        // Store original plaintext
-        const entryId = `entry_${entry.uid || idx}`;
-        displayCipheredTextareas.set(entryId, {
-            plaintext: originalContent,
-            ciphered: caesarCipher(originalContent, shift),
-            isRevealed: false,
-            uid: entry.uid
+        // Cipher ALL entries (no spoiler tag required for global button)
+        const textareaId = textarea.getAttribute('data-lore-spoiler-id') || `lore_${Date.now()}_${Math.random()}`;
+        textarea.setAttribute('data-lore-spoiler-id', textareaId);
+        
+        const ciphered = processSpoilerText(currentValue);
+        console.log(`[lore-spoilers] Ciphered textarea ${idx}, original length=${currentValue.length}, ciphered length=${ciphered.length}`);
+        
+        displayCipheredTextareas.set(textareaId, {
+            plaintext: currentValue,
+            ciphered: ciphered,
+            isRevealed: false
         });
         
-        // Cipher the content in the data structure
-        entry.content = caesarCipher(originalContent, shift);
-        console.log(`[lore-spoilers] Entry ${idx}: Ciphered in data structure`);
+        textarea.value = ciphered;
+        console.log(`[lore-spoilers] Set textarea ${idx} value to ciphered text`);
         
-        // Update textarea if it's visible in UI
-        const textarea = document.querySelector(`textarea[id="world_entry_content_${entry.uid}"]`);
-        if (textarea) {
-            textarea.value = entry.content;
-            console.log(`[lore-spoilers] Entry ${idx}: Updated visible textarea`);
+        // Toggle per-entry buttons if they exist (for open entries)
+        const entry = textarea.closest('.world_entry');
+        if (entry) {
+            const buttonContainer = entry.querySelector('.lore-spoiler-cipher-btn');
+            if (buttonContainer) {
+                const cipherBtn = buttonContainer.querySelector('.lore-cipher-btn');
+                const revealBtn = buttonContainer.querySelector('.lore-reveal-btn');
+                if (cipherBtn && revealBtn) {
+                    cipherBtn.style.display = 'none';
+                    revealBtn.style.display = 'inline-block';
+                }
+            }
         }
         
         cipheredCount++;
     });
     
-    // Save the modified world info
-    context.saveWorldInfo(worldInfoData.name);
-    
-    console.log(`[lore-spoilers] Ciphered ${cipheredCount} entries total in data structure`);
+    console.log(`[lore-spoilers] Ciphered ${cipheredCount} entries total`);
     
     if (cipheredCount > 0) {
         toastr.success(`Ciphered ${cipheredCount} ${cipheredCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
     } else {
-        toastr.info("No entries with content found", "Lore Spoilers");
+        toastr.info("No entries found to cipher", "Lore Spoilers");
     }
 }
 
@@ -194,51 +209,15 @@ function onRevealAllClick() {
         return;
     }
     
-    // Get the World Info data from SillyTavern context
-    const context = getContext();
-    const worldInfoData = context.worldInfoData;
-    
-    if (!worldInfoData || !worldInfoData.entries || worldInfoData.entries.length === 0) {
-        toastr.warning("No World Info entries found in current lorebook.", "Lore Spoilers");
-        return;
-    }
-    
     let revealedCount = 0;
     
-    // Restore plaintext for all ciphered entries
-    displayCipheredTextareas.forEach((data, entryId) => {
-        // Find the entry by UID
-        const entry = worldInfoData.entries.find(e => e.uid === data.uid);
+    // Find all entries with ciphered data
+    displayCipheredTextareas.forEach((data, textareaId) => {
+        const textarea = document.querySelector(`textarea[data-lore-spoiler-id="${textareaId}"]`);
         
-        if (entry && !data.isRevealed) {
-            // Restore plaintext in data structure
-            entry.content = data.plaintext;
-            
-            // Update textarea if visible
-            const textarea = document.querySelector(`textarea[id="world_entry_content_${entry.uid}"]`);
-            if (textarea) {
-                textarea.value = data.plaintext;
-            }
-            
+        if (textarea && !data.isRevealed) {
+            textarea.value = data.plaintext;
             data.isRevealed = true;
-            revealedCount++;
-        }
-    });
-    
-    // Save the modified world info
-    if (revealedCount > 0) {
-        context.saveWorldInfo(worldInfoData.name);
-    }
-    
-    // Clear the cipher map
-    displayCipheredTextareas.clear();
-    
-    if (revealedCount > 0) {
-        toastr.success(`Revealed ${revealedCount} ${revealedCount === 1 ? 'entry' : 'entries'}`, "Lore Spoilers");
-    } else {
-        toastr.info("No ciphered entries to reveal", "Lore Spoilers");
-    }
-}
             
             // Toggle per-entry buttons if they exist
             const entry = textarea.closest('.world_entry');
