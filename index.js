@@ -8,8 +8,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 // Default settings
 const defaultSettings = {
-    enabled: false,
-    cipherShift: 13
+    enabled: false
 };
 
 // Store original (plaintext) values for World Info entries
@@ -22,7 +21,6 @@ async function loadSettings() {
         Object.assign(extension_settings[extensionName], defaultSettings);
     }
     $("#lore_spoilers_enabled").prop("checked", extension_settings[extensionName].enabled);
-    $("#lore_spoilers_shift").val(extension_settings[extensionName].cipherShift);
 }
 
 // Handle enable checkbox change
@@ -32,17 +30,7 @@ function onEnabledChange(event) {
     saveSettingsDebounced();
 }
 
-// Handle cipher shift change
-function onCipherShiftChange(event) {
-    let value = parseInt($(event.target).val());
-    if (isNaN(value) || value < 1) value = 1;
-    if (value > 25) value = 25;
-    extension_settings[extensionName].cipherShift = value;
-    $("#lore_spoilers_shift").val(value);
-    saveSettingsDebounced();
-}
-
-// Caesar cipher function
+// Caesar cipher function with fixed shift of 13 (ROT13)
 function caesarCipher(text, shift) {
     return text.split('').map(char => {
         if (char.match(/[a-z]/i)) {
@@ -82,7 +70,7 @@ function onCipherAllClick() {
     }
     
     let cipheredCount = 0;
-    const shift = extension_settings[extensionName].cipherShift;
+    const shift = 13; // Fixed ROT13
     
     textareas.forEach((textarea, idx) => {
         const currentValue = textarea.value;
@@ -257,7 +245,6 @@ jQuery(async () => {
         $("#extensions_settings2").append(settingsHtml);
         
         $("#lore_spoilers_enabled").on("input", onEnabledChange);
-        $("#lore_spoilers_shift").on("input", onCipherShiftChange);
         
         loadSettings();
         setupWorldInfoMonitoring();
