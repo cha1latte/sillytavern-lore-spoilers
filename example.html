@@ -9,15 +9,9 @@
                 <input id="lore_spoilers_enabled" type="checkbox" />
                 <label for="lore_spoilers_enabled">Enable Lore Spoilers</label>
             </div>
-            <p><small>When enabled, World Info entries starting with the spoiler tag will be hidden in the UI but still sent to the LLM.</small></p>
+            <p><small>When enabled, you can cipher entire lorebooks to hide spoilers from yourself while the LLM still sees the plaintext.</small></p>
             
             <hr>
-            
-            <div>
-                <label for="lore_spoilers_tag"><strong>Spoiler Tag:</strong></label>
-                <input id="lore_spoilers_tag" class="text_pole" type="text" placeholder="[SPOILER]" />
-                <p><small>World Info entries starting with this tag will be hidden. Example: <code>[SPOILER]</code></small></p>
-            </div>
             
             <div>
                 <label for="lore_spoilers_shift"><strong>Caesar Cipher Shift (1-25):</strong></label>
@@ -33,12 +27,12 @@
                     <li>Enable the extension above</li>
                     <li>Go to World Info panel (book icon)</li>
                     <li>Open a lorebook</li>
-                    <li>Look for "🔒 Cipher This Lorebook" button at the top</li>
-                    <li>Click to cipher all entries in that lorebook</li>
+                    <li>Expand ALL entries you want to cipher</li>
+                    <li>Click "🔒 Cipher This Lorebook" button at the top</li>
                     <li>Click "👁️ Reveal This Lorebook" to show them again</li>
                 </ol>
-                <p><strong>Per-Entry Buttons:</strong> Add <code>[SPOILER]</code> at the start of an entry to get individual cipher/reveal buttons.</p>
-                <p><strong>Important:</strong> The LLM always receives the unciphered plaintext automatically!</p>
+                <p><strong>Important:</strong> You must expand all entries before ciphering. Collapsed entries won't be ciphered.</p>
+                <p><strong>LLM Access:</strong> The LLM always receives the unciphered plaintext automatically!</p>
             </div>
         </div>
     </div>
