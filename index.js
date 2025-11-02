@@ -14,6 +14,9 @@ const defaultSettings = {
 // Store original (plaintext) values for World Info entries
 const displayCipheredTextareas = new Map();
 
+// Store button state to survive re-injections
+let currentButtonState = 'cipher'; // 'cipher' or 'reveal'
+
 // Load saved settings
 async function loadSettings() {
     extension_settings[extensionName] = extension_settings[extensionName] || {};
@@ -344,8 +347,22 @@ function injectLorebookButtons() {
         if (lorebookContainer) break;
     }
     
-    // Don't re-inject if buttons already exist - just return
-    if (lorebookContainer.querySelector('.lore-spoiler-lorebook-btns')) {
+    // Don't re-inject if buttons already exist - just update their state
+    const existingContainer = lorebookContainer.querySelector('.lore-spoiler-lorebook-btns');
+    if (existingContainer) {
+        // Update button visibility based on stored state
+        const expandCipherBtn = existingContainer.querySelector('.lore-expand-cipher-btn');
+        const revealBtn = existingContainer.querySelector('.lore-reveal-all-btn');
+        
+        if (expandCipherBtn && revealBtn) {
+            if (currentButtonState === 'reveal') {
+                expandCipherBtn.style.display = 'none';
+                revealBtn.style.display = 'inline-block';
+            } else {
+                expandCipherBtn.style.display = 'inline-block';
+                revealBtn.style.display = 'none';
+            }
+        }
         return;
     }
     
@@ -374,12 +391,19 @@ function injectLorebookButtons() {
     const expandCipherBtn = buttonContainer.querySelector('.lore-expand-cipher-btn');
     const revealBtn = buttonContainer.querySelector('.lore-reveal-all-btn');
     
-    expandCipherBtn.addEventListener('click', async () => {
-        console.log('[lore-spoilers] Expand & Cipher button clicked');
-        // Switch button immediately
+    // Set initial button state based on stored state
+    if (currentButtonState === 'reveal') {
         expandCipherBtn.style.display = 'none';
         revealBtn.style.display = 'inline-block';
-        console.log('[lore-spoilers] Button switched immediately');
+    }
+    
+    expandCipherBtn.addEventListener('click', async () => {
+        console.log('[lore-spoilers] Expand & Cipher button clicked');
+        // Switch button state
+        currentButtonState = 'reveal';
+        expandCipherBtn.style.display = 'none';
+        revealBtn.style.display = 'inline-block';
+        console.log('[lore-spoilers] Button state switched to reveal');
         
         // Then do the cipher operation
         await onExpandAndCipherClick();
@@ -387,10 +411,11 @@ function injectLorebookButtons() {
     
     revealBtn.addEventListener('click', () => {
         console.log('[lore-spoilers] Reveal button clicked');
-        // Switch button immediately
+        // Switch button state
+        currentButtonState = 'cipher';
         revealBtn.style.display = 'none';
         expandCipherBtn.style.display = 'inline-block';
-        console.log('[lore-spoilers] Button switched immediately');
+        console.log('[lore-spoilers] Button state switched to cipher');
         
         // Then do the reveal operation
         onRevealAllClick();
