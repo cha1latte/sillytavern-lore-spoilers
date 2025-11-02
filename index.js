@@ -344,8 +344,10 @@ function injectLorebookButtons() {
         if (lorebookContainer) break;
     }
     
-    if (!lorebookContainer || lorebookContainer.querySelector('.lore-spoiler-lorebook-btns')) {
-        return;
+    // Remove old buttons if they exist and re-inject with updated listeners
+    const oldButtons = lorebookContainer.querySelector('.lore-spoiler-lorebook-btns');
+    if (oldButtons) {
+        oldButtons.remove();
     }
     
     const buttonContainer = document.createElement('div');
@@ -374,13 +376,17 @@ function injectLorebookButtons() {
     const revealBtn = buttonContainer.querySelector('.lore-reveal-all-btn');
     
     expandCipherBtn.addEventListener('click', async () => {
+        console.log('[lore-spoilers] Expand & Cipher button clicked');
         await onExpandAndCipherClick();
+        console.log('[lore-spoilers] Hiding cipher button, showing reveal button');
         expandCipherBtn.style.display = 'none';
         revealBtn.style.display = 'inline-block';
     });
     
     revealBtn.addEventListener('click', () => {
+        console.log('[lore-spoilers] Reveal button clicked');
         onRevealAllClick();
+        console.log('[lore-spoilers] Hiding reveal button, showing cipher button');
         revealBtn.style.display = 'none';
         expandCipherBtn.style.display = 'inline-block';
     });
