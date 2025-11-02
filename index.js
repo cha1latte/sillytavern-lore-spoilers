@@ -377,18 +377,24 @@ function injectLorebookButtons() {
     
     expandCipherBtn.addEventListener('click', async () => {
         console.log('[lore-spoilers] Expand & Cipher button clicked');
-        await onExpandAndCipherClick();
-        console.log('[lore-spoilers] Hiding cipher button, showing reveal button');
+        // Switch button immediately
         expandCipherBtn.style.display = 'none';
         revealBtn.style.display = 'inline-block';
+        console.log('[lore-spoilers] Button switched immediately');
+        
+        // Then do the cipher operation
+        await onExpandAndCipherClick();
     });
     
     revealBtn.addEventListener('click', () => {
         console.log('[lore-spoilers] Reveal button clicked');
-        onRevealAllClick();
-        console.log('[lore-spoilers] Hiding reveal button, showing cipher button');
+        // Switch button immediately
         revealBtn.style.display = 'none';
         expandCipherBtn.style.display = 'inline-block';
+        console.log('[lore-spoilers] Button switched immediately');
+        
+        // Then do the reveal operation
+        onRevealAllClick();
     });
 }
 
