@@ -344,10 +344,9 @@ function injectLorebookButtons() {
         if (lorebookContainer) break;
     }
     
-    // Remove old buttons if they exist and re-inject with updated listeners
-    const oldButtons = lorebookContainer.querySelector('.lore-spoiler-lorebook-btns');
-    if (oldButtons) {
-        oldButtons.remove();
+    // Don't re-inject if buttons already exist - just return
+    if (lorebookContainer.querySelector('.lore-spoiler-lorebook-btns')) {
+        return;
     }
     
     const buttonContainer = document.createElement('div');
